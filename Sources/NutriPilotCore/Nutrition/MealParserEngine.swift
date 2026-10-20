@@ -162,6 +162,16 @@ public final class MealParserEngine: Sendable {
         return ParsedMeal(rawInput: text, items: parsedItems)
     }
 
+    /// Conveniência para parsing de refeição a partir de texto natural.
+    public func parseMeal(text: String) -> ParsedMeal {
+        parse(text: text)
+    }
+
+    /// Chamada estática conveniente na instância compartilhada.
+    public static func parseMeal(text: String) -> ParsedMeal {
+        shared.parse(text: text)
+    }
+
     // MARK: - Divisão de Frases em Itens
 
     /// Divide o texto em fragmentos individuais respeitando separadores clássicos do português brasileiro.

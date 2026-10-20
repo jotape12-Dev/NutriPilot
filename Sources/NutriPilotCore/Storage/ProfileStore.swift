@@ -12,12 +12,17 @@ public final class ProfileStore: @unchecked Sendable {
 
     private let fileManager = FileManager.default
     private let fileName = "nutripilot_profile_v1.json"
+    private let customStorageURL: URL?
 
-    public init() {
+    public init(storageURL: URL? = nil) {
+        self.customStorageURL = storageURL
         loadProfile()
     }
 
     private var storageURL: URL {
+        if let custom = customStorageURL {
+            return custom
+        }
         let paths = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)
         let appSupportDir = paths[0].appendingPathComponent("NutriPilot", isDirectory: true)
 
