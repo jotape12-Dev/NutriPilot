@@ -6,19 +6,23 @@ public struct DashboardView: View {
     public let target: NutritionTarget
     public var waterStore: WaterStore
     public var mealStore: MealStore
+    public var parserEngine: MealParserEngine
 
+    @State private var isShowingTextLogModal: Bool = false
     @State private var hapticTrigger: Int = 0
 
     public init(
         profile: UserProfile,
         target: NutritionTarget,
         waterStore: WaterStore = .shared,
-        mealStore: MealStore = .shared
+        mealStore: MealStore = .shared,
+        parserEngine: MealParserEngine = .shared
     ) {
         self.profile = profile
         self.target = target
         self.waterStore = waterStore
         self.mealStore = mealStore
+        self.parserEngine = parserEngine
     }
 
     private var todayTotals: DayNutritionTotals {
@@ -48,6 +52,9 @@ public struct DashboardView: View {
                     // Card da Próxima Ação Recomendada (Inteligência Dinâmica)
                     nextActionCard
 
+                    // Atalho Rápido para Registro por Texto/Voz (Fase 3)
+                    quickMealShortcutCard
+
                     // Resumo Real de Calorias & Macronutrientes
                     macroSummarySection
 
@@ -61,6 +68,22 @@ public struct DashboardView: View {
             .navigationTitle("Olá, \(profile.name)")
             .background(Color.appBackground)
             .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        isShowingTextLogModal = true
+                        hapticTrigger += 1
+                    } label: {
+                        Label("Registro Rápido", systemImage: "sparkles")
+                    }
+                }
+            }
+            .sheet(isPresented: $isShowingTextLogModal) {
+                DashboardQuickMealModal(
+                    parserEngine: parserEngine,
+                    mealStore: mealStore
+                )
+            }
         }
     }
 
@@ -153,6 +176,52 @@ public struct DashboardView: View {
                 .stroke(Color.green.opacity(0.25), lineWidth: 1.5)
         )
         .shadow(color: Color.black.opacity(0.03), radius: 3, y: 1)
+    }
+
+    // MARK: - Atalho Rápido de Refeição (Texto / Voz)
+
+    private var quickMealShortcutCard: some View {
+        Button {
+            isShowingTextLogModal = true
+            hapticTrigger += 1
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.green.opacity(0.15))
+                        .frame(width: 42, height: 42)
+                    Image(systemName: "sparkles")
+                        .foregroundColor(.green)
+                        .font(.headline)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text("Registro Rápido em Linguagem Natural")
+                            .font(.subheadline.bold())
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Image(systemName: "mic.fill")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Text("Fale ou digite: \"2 filés de frango e 4 colheres de arroz\"")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.title3)
+                    .foregroundColor(.green)
+            }
+            .padding(14)
+            .background(Color.appCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Resumo de Macronutrientes
@@ -302,5 +371,152 @@ public struct DashboardView: View {
         .background(Color.appCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
+    }
+}
+
+// MARK: - Modal de Registro Rápido do Dashboard
+
+private struct DashboardQuickMealModal: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let parserEngine: MealParserEngine
+    let mealStore: MealStore
+
+    @State private var inputText: String = ""
+    @State private var parsedMealToConfirm: ParsedMeal?
+    @State private var hapticTrigger: Int = 0
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Image(systemName: "sparkles")
+                                .foregroundColor(.yellow)
+                            Text("DESCREVA SUA REFEIÇÃO")
+                                .font(.caption.bold())
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Image(systemName: "mic.fill")
+                                .foregroundColor(.secondary)
+                                .font(.caption)
+                        }
+
+                        HStack(spacing: 8) {
+                            TextField("Ex: 2 filés de frango e 4 colheres de arroz", text: $inputText)
+                                .textFieldStyle(.plain)
+                                .autocorrectionDisabled()
+                                .onSubmit {
+                                    analyze(text: inputText)
+                                }
+
+                            if !inputText.isEmpty {
+                                Button {
+                                    inputText = ""
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(14)
+                        .background(Color.appBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                        Button {
+                            analyze(text: inputText)
+                        } label: {
+                            HStack {
+                                Image(systemName: "sparkles")
+                                Text("Analisar e Decompor Refeição")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray.opacity(0.5) : Color.green)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .buttonStyle(.plain)
+                    }
+                    .padding(16)
+                    .background(Color.appCardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .padding(.horizontal)
+
+                    // Sugestões Rápidas de Exemplos
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("OU ESCOLHA UM EXEMPLO BRASILEIRO")
+                            .font(.caption.bold())
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+
+                        VStack(spacing: 8) {
+                            exampleRow(text: "2 filés de frango e 4 colheres de arroz")
+                            exampleRow(text: "1 scoop de whey e 1 banana")
+                            exampleRow(text: "3 ovos mexidos e 2 fatias de pão")
+                            exampleRow(text: "1 concha de feijão e 1 bife de patinho")
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                .padding(.top, 10)
+                .padding(.bottom, 24)
+            }
+            .navigationTitle("Registro Rápido")
+            .background(Color.appBackground)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Fechar") {
+                        dismiss()
+                    }
+                }
+            }
+            .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
+            .sheet(item: $parsedMealToConfirm) { meal in
+                MealParserConfirmationSheet(
+                    parsedMeal: meal,
+                    defaultMealType: .lunch,
+                    mealStore: mealStore
+                ) {
+                    dismiss()
+                }
+            }
+        }
+    }
+
+    private func exampleRow(text: String) -> some View {
+        Button {
+            inputText = text
+            analyze(text: text)
+        } label: {
+            HStack {
+                Image(systemName: "bolt.fill")
+                    .foregroundColor(.green)
+                    .font(.caption)
+                Text(text)
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "arrow.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(14)
+            .background(Color.appCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func analyze(text: String) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        let parsed = parserEngine.parse(text: clean)
+        parsedMealToConfirm = parsed
+        hapticTrigger += 1
     }
 }

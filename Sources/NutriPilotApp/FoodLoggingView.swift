@@ -4,16 +4,23 @@ import NutriPilotCore
 public struct FoodLoggingView: View {
     public var mealStore: MealStore
     public var searchEngine: FoodSearchEngine
+    public var parserEngine: MealParserEngine
 
     @State private var selectedMeal: MealType = .lunch
     @State private var searchQuery: String = ""
-    @State private var quickTextInput: String = ""
+    @State private var naturalLanguageInput: String = ""
+    @State private var parsedMealToConfirm: ParsedMeal?
     @State private var selectedFoodForPortion: FoodItem?
     @State private var hapticTrigger: Int = 0
 
-    public init(mealStore: MealStore = .shared, searchEngine: FoodSearchEngine = .shared) {
+    public init(
+        mealStore: MealStore = .shared,
+        searchEngine: FoodSearchEngine = .shared,
+        parserEngine: MealParserEngine = .shared
+    ) {
         self.mealStore = mealStore
         self.searchEngine = searchEngine
+        self.parserEngine = parserEngine
     }
 
     private var searchResults: [FoodItem] {
@@ -39,6 +46,9 @@ public struct FoodLoggingView: View {
                     // Resumo Nutricional Rápido do Dia
                     dailyMacroBanner
 
+                    // Registro Rápido (Texto ou Voz / NLP)
+                    quickTextOrVoiceSection
+
                     // Seletor de Refeição Ativa
                     mealTypePicker
 
@@ -59,6 +69,16 @@ public struct FoodLoggingView: View {
             .navigationTitle("Refeições")
             .background(Color.appBackground)
             .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
+            .sheet(item: $parsedMealToConfirm) { meal in
+                MealParserConfirmationSheet(
+                    parsedMeal: meal,
+                    defaultMealType: selectedMeal,
+                    mealStore: mealStore,
+                    searchEngine: searchEngine
+                ) {
+                    naturalLanguageInput = ""
+                }
+            }
             .sheet(item: $selectedFoodForPortion) { food in
                 FoodPortionSheet(
                     food: food,
@@ -96,6 +116,121 @@ public struct FoodLoggingView: View {
         .background(Color.appCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal)
+    }
+
+    private var quickTextOrVoiceSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.yellow)
+                Text("REGISTRO RÁPIDO (TEXTO OU VOZ)")
+                    .font(.caption.bold())
+                    .foregroundColor(.secondary)
+                Spacer()
+                Image(systemName: "mic.fill")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            // Campo de Entrada com Botão de Ação Rápida
+            HStack(spacing: 8) {
+                TextField("Ex: 2 filés de frango e 4 colheres de arroz", text: $naturalLanguageInput)
+                    .textFieldStyle(.plain)
+                    .autocorrectionDisabled()
+                    .onSubmit {
+                        analyzeMeal(text: naturalLanguageInput)
+                    }
+
+                if !naturalLanguageInput.isEmpty {
+                    Button {
+                        naturalLanguageInput = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Button {
+                    analyzeMeal(text: naturalLanguageInput)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                        Text("Analisar")
+                    }
+                    .font(.subheadline.bold())
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(naturalLanguageInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray.opacity(0.5) : Color.green)
+                    .clipShape(Capsule())
+                }
+                .disabled(naturalLanguageInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.appBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            // Chips com Exemplos Tocáveis Rápidos
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Exemplos prontos (1 toque para testar):")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        exampleChip(text: "2 filés de frango e 4 colheres de arroz")
+                        exampleChip(text: "1 scoop de whey e 1 banana")
+                        exampleChip(text: "3 ovos mexidos e 2 fatias de pão")
+                        exampleChip(text: "1 concha de feijão e 1 bife de patinho")
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.appCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.green.opacity(0.35), lineWidth: 1.5)
+        )
+        .shadow(color: Color.black.opacity(0.03), radius: 3, y: 1)
+        .padding(.horizontal)
+    }
+
+    private func exampleChip(text: String) -> some View {
+        Button {
+            naturalLanguageInput = text
+            analyzeMeal(text: text)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "bolt.fill")
+                    .font(.caption2)
+                    .foregroundColor(.green)
+                Text(text)
+                    .font(.caption)
+                    .foregroundColor(.primary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.appBackground)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func analyzeMeal(text: String) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        let parsed = parserEngine.parse(text: clean)
+        parsedMealToConfirm = parsed
+        hapticTrigger += 1
     }
 
     private func macroPill(title: String, value: String, color: Color) -> some View {
