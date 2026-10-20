@@ -10,6 +10,7 @@ public struct DashboardView: View {
     public var parserEngine: MealParserEngine
 
     @State private var isShowingTextLogModal: Bool = false
+    @State private var isShowingExportSheet: Bool = false
     @State private var hapticTrigger: Int = 0
 
     public init(
@@ -88,13 +89,30 @@ public struct DashboardView: View {
             .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        isShowingTextLogModal = true
-                        hapticTrigger += 1
-                    } label: {
-                        Label("Registro Rápido", systemImage: "sparkles")
+                    HStack(spacing: 14) {
+                        Button {
+                            isShowingExportSheet = true
+                            hapticTrigger += 1
+                        } label: {
+                            Label("Exportar Relatório", systemImage: "square.and.arrow.up")
+                        }
+
+                        Button {
+                            isShowingTextLogModal = true
+                            hapticTrigger += 1
+                        } label: {
+                            Label("Registro Rápido", systemImage: "sparkles")
+                        }
                     }
                 }
+            }
+            .sheet(isPresented: $isShowingExportSheet) {
+                ReportExportView(
+                    profileStore: ProfileStore.shared,
+                    mealStore: mealStore,
+                    waterStore: waterStore,
+                    bodyStore: bodyStore
+                )
             }
             .sheet(isPresented: $isShowingTextLogModal) {
                 DashboardQuickMealModal(
