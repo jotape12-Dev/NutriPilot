@@ -52,6 +52,6 @@
 
 ---
 
-## Fase 6 — Refinamento e Validação
-- [ ] **T-026:** Exportação de relatório em PDF/JSON para nutricionista.
-- [ ] **T-027:** Testes end-to-end e validação dos critérios de performance (< 2s água, < 10s comida).
+## Fase 6 — Refinamento e Validação [CONCLUÍDO]
+- [x] **T-026:** Exportação de relatório em PDF/Markdown e JSON para nutricionista (`ReportExporter` & `ReportExportView` com `ShareLink`).
+- [x] **T-027:** Testes automatizados de benchmark e validação estrita dos SLAs de performance (`PerformanceBenchmarkTests`).
