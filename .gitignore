@@ -1,0 +1,46 @@
+# Xcode and Swift
+.build/
+DerivedData/
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/xcshareddata/xcschemes/
+!*.xcodeproj/xcshareddata/xcschemes/*.xcscheme
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+build/
+
+# Swift Package Manager
+Packages/
+Package.pins
+Package.resolved
+.swiftpm/xcode
+
+# App Secrets and Environment Variables
+.env
+.env.*
+!.env.example
+Secrets.swift
+!Secrets.swift.example
+Config.xcconfig
+!Config.xcconfig.example
+APIKeys.plist
+!APIKeys.plist.example
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# User and Temporary Data
+photos/
+cache/
+logs/
+*.log
+tmp/
