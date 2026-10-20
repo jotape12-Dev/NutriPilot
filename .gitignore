@@ -44,3 +44,7 @@ cache/
 logs/
 *.log
 tmp/
+docs/rea/artifacts/
+*.apk
+*.xapk
+
