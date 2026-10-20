@@ -39,6 +39,7 @@ Icon
 .Trashes
 
 # User and Temporary Data
+.maestri/
 photos/
 cache/
 logs/
