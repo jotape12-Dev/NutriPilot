@@ -1,5 +1,24 @@
 import Foundation
 
+public struct FoodPortion: Identifiable, Codable, Sendable, Equatable {
+    public let id: UUID
+    public var name: String
+    public var gramWeight: Double
+    public var description: String?
+
+    public init(
+        id: UUID = UUID(),
+        name: String,
+        gramWeight: Double,
+        description: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.gramWeight = gramWeight
+        self.description = description
+    }
+}
+
 public struct FoodItem: Identifiable, Codable, Sendable, Equatable {
     public let id: UUID
     public var name: String
@@ -12,6 +31,7 @@ public struct FoodItem: Identifiable, Codable, Sendable, Equatable {
     public var fatGrams: Double
     public var fiberGrams: Double
     public var source: String
+    public var portions: [FoodPortion]
 
     public init(
         id: UUID = UUID(),
@@ -24,7 +44,8 @@ public struct FoodItem: Identifiable, Codable, Sendable, Equatable {
         carbsGrams: Double,
         fatGrams: Double,
         fiberGrams: Double = 0.0,
-        source: String = "TBCA"
+        source: String = "TBCA",
+        portions: [FoodPortion] = []
     ) {
         self.id = id
         self.name = name
@@ -37,6 +58,7 @@ public struct FoodItem: Identifiable, Codable, Sendable, Equatable {
         self.fatGrams = fatGrams
         self.fiberGrams = fiberGrams
         self.source = source
+        self.portions = portions
     }
 
     public func calculatedFor(amount: Double) -> (calories: Double, protein: Double, carbs: Double, fat: Double, fiber: Double) {
@@ -50,9 +72,14 @@ public struct FoodItem: Identifiable, Codable, Sendable, Equatable {
             fiber: (fiberGrams * ratio).rounded(to: 1)
         )
     }
+
+    public func calculatedFor(portion: FoodPortion, quantity: Double = 1.0) -> (calories: Double, protein: Double, carbs: Double, fat: Double, fiber: Double) {
+        let totalGrams = portion.gramWeight * quantity
+        return calculatedFor(amount: totalGrams)
+    }
 }
 
-private extension Double {
+extension Double {
     func rounded(to places: Int) -> Double {
         let divisor = pow(10.0, Double(places))
         return (self * divisor).rounded() / divisor
