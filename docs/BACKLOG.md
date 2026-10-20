@@ -44,11 +44,11 @@
 
 ---
 
-## Fase 5 — Planos Alimentares e Assistente Sucinto
-- [ ] **T-022:** Gerador de plano alimentar diário baseado nas metas.
-- [ ] **T-023:** Motor de substituição de alimentos equivalentes por macronutriente.
-- [ ] **T-024:** Lista de compras consolidada gerada a partir do plano.
-- [ ] **T-025:** Assistente conversacional sucinto com respostas em até 4 linhas.
+## Fase 5 — Planos Alimentares e Assistente Sucinto [CONCLUÍDO]
+- [x] **T-022:** Gerador de plano alimentar diário baseado nas metas (`MealPlanGenerator`).
+- [x] **T-023:** Motor de substituição de alimentos equivalentes por macronutriente (`FoodSubstitutionEngine`).
+- [x] **T-024:** Lista de compras consolidada gerada a partir do plano (`GroceryListGenerator`).
+- [x] **T-025:** Assistente conversacional sucinto com respostas em até 4 linhas (`SuccinctAssistantEngine`).
 
 ---
 
