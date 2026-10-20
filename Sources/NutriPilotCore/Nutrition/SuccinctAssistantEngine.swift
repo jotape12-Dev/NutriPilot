@@ -1,11 +1,43 @@
 import Foundation
 
+/// Resposta estruturada do assistente sucinto com garantia estrita de até 4 linhas e indicação clara da próxima ação.
+public struct SuccinctAnswer: Sendable, Equatable {
+    public let fullText: String
+    public let lines: [String]
+    public let nextAction: String?
+
+    public init(fullText: String, nextAction: String? = nil) {
+        self.fullText = fullText
+        self.lines = fullText.components(separatedBy: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        self.nextAction = nextAction
+    }
+}
+
 /// Motor de assistente nutricional conversacional sucinto com garantia estrita de no máximo 4 linhas por resposta,
 /// sem introduções vazias, fundamentado no estado metabólico real do usuário hoje.
 public final class SuccinctAssistantEngine: Sendable {
     public static let shared = SuccinctAssistantEngine()
 
     public init() {}
+
+    /// Processa a mensagem e retorna a resposta sucinta estruturada com até 4 linhas e destaque para a próxima ação.
+    public func answer(
+        query: String,
+        profileStore: ProfileStore = .shared,
+        mealStore: MealStore = .shared,
+        waterStore: WaterStore = .shared,
+        date: Date = Date()
+    ) -> SuccinctAnswer {
+        let text = respond(to: query, profileStore: profileStore, mealStore: mealStore, waterStore: waterStore, date: date)
+        let lines = text.components(separatedBy: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        let nextAction: String?
+        if lines.count >= 2 {
+            nextAction = lines.last
+        } else {
+            nextAction = nil
+        }
+        return SuccinctAnswer(fullText: text, nextAction: nextAction)
+    }
 
     /// Processa a mensagem do usuário contextualizada com as stores ativas do aplicativo.
     public func respond(

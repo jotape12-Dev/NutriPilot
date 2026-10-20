@@ -97,6 +97,26 @@ public struct DailyMealPlan: Identifiable, Codable, Sendable, Equatable {
         self.meals = meals
     }
 
+    public init(
+        id: UUID = UUID(),
+        createdAt: Date = Date(),
+        targetCalories: Double,
+        targetProteinGrams: Double,
+        targetCarbsGrams: Double,
+        targetFatGrams: Double,
+        targetFiberGrams: Double,
+        meals: [PlannedMeal]
+    ) {
+        self.id = id
+        self.createdAt = createdAt
+        self.targetCalories = targetCalories.rounded(to: 1)
+        self.targetProteinGrams = targetProteinGrams.rounded(to: 1)
+        self.targetCarbsGrams = targetCarbsGrams.rounded(to: 1)
+        self.targetFatGrams = targetFatGrams.rounded(to: 1)
+        self.targetFiberGrams = targetFiberGrams.rounded(to: 1)
+        self.meals = meals
+    }
+
     public var totalCalories: Double { meals.reduce(0) { $0 + $1.totalCalories }.rounded(to: 1) }
     public var totalProtein: Double { meals.reduce(0) { $0 + $1.totalProtein }.rounded(to: 1) }
     public var totalCarbs: Double { meals.reduce(0) { $0 + $1.totalCarbs }.rounded(to: 1) }

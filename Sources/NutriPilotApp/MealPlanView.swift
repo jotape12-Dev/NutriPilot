@@ -6,12 +6,17 @@ public struct MealPlanView: View {
     public var mealStore: MealStore
     public var waterStore: WaterStore
     public var profileStore: ProfileStore
+    public var planStore: MealPlanStore
 
     @State private var selectedSegment: PlanViewSegment = .plan
-    @State private var planMeals: [PlannedMeal] = PlannedMeal.samplePlan
-    @State private var groceryCategories: [GroceryCategory] = GroceryCategory.sampleCategories
-    @State private var selectedItemForSubstitution: PlannedFoodItem?
-    @State private var assistantMessages: [AssistantChatMessage] = AssistantChatMessage.sampleMessages
+    @State private var itemToSubstitute: SubstitutionTarget?
+    @State private var assistantMessages: [AssistantChatMessage] = [
+        AssistantChatMessage(
+            text: "Sou o assistente de bolso NutriPilot.\nRespondo qualquer dúvida em no máximo 4 linhas diretas.\nSeu foco hoje é bater a meta de proteínas sem estourar calorias.",
+            isUser: false,
+            nextAction: "Consultar seu status de hoje ou conferir o plano"
+        )
+    ]
     @State private var assistantInput: String = ""
     @State private var hapticTrigger: Int = 0
 
@@ -19,12 +24,14 @@ public struct MealPlanView: View {
         targetCalories: Double = 2500,
         mealStore: MealStore = .shared,
         waterStore: WaterStore = .shared,
-        profileStore: ProfileStore = .shared
+        profileStore: ProfileStore = .shared,
+        planStore: MealPlanStore = .shared
     ) {
         self.targetCalories = targetCalories
         self.mealStore = mealStore
         self.waterStore = waterStore
         self.profileStore = profileStore
+        self.planStore = planStore
     }
 
     public var body: some View {
@@ -53,12 +60,38 @@ public struct MealPlanView: View {
             .navigationTitle("Plano Alimentar")
             .background(Color.appBackground)
             .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
-            .sheet(item: $selectedItemForSubstitution) { item in
-                FoodSubstitutionSheet(baseItem: item) { substitute in
-                    applySubstitution(baseItem: item, with: substitute)
+            .sheet(item: $itemToSubstitute) { target in
+                FoodSubstitutionSheet(target: target) { newItem in
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        planStore.replaceItem(mealId: target.mealId, oldItemId: target.item.id, with: newItem)
+                        hapticTrigger += 1
+                    }
                 }
             }
+            .onAppear {
+                ensureActivePlanExists()
+            }
         }
+    }
+
+    private func ensureActivePlanExists() {
+        if planStore.activePlan == nil {
+            let target = currentEffectiveTarget
+            planStore.generateAndSetActivePlan(target: target)
+        }
+    }
+
+    private var currentEffectiveTarget: NutritionTarget {
+        if let target = profileStore.currentTarget {
+            return target
+        }
+        return NutritionTarget(
+            calories: targetCalories > 0 ? targetCalories : 2200,
+            proteinGrams: (targetCalories > 0 ? targetCalories : 2200) * 0.30 / 4.0,
+            carbsGrams: (targetCalories > 0 ? targetCalories : 2200) * 0.45 / 4.0,
+            fatGrams: (targetCalories > 0 ? targetCalories : 2200) * 0.25 / 9.0,
+            waterMl: 2800
+        )
     }
 
     // MARK: - 1. Segment Picker Header
@@ -78,12 +111,16 @@ public struct MealPlanView: View {
     private var dailyPlanView: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Card de Resumo de Metas do Plano
-                planSummaryHeader
+                if let plan = planStore.activePlan {
+                    // Card de Resumo de Metas do Plano
+                    planSummaryHeader(plan: plan)
 
-                // Lista de Refeições Planejadas
-                ForEach(planMeals) { meal in
-                    mealCardView(meal: meal)
+                    // Lista de Refeições Planejadas do Core
+                    ForEach(plan.meals) { meal in
+                        mealCardView(meal: meal)
+                    }
+                } else {
+                    emptyPlanView
                 }
             }
             .padding()
@@ -91,21 +128,53 @@ public struct MealPlanView: View {
         }
     }
 
-    private var planSummaryHeader: some View {
-        VStack(spacing: 8) {
+    private var emptyPlanView: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "fork.knife.circle")
+                .font(.system(size: 48))
+                .foregroundColor(.green)
+            Text("Nenhum plano alimentar ativo")
+                .font(.headline)
+            Text("Gere um cardápio diário estruturado e balanceado com base nas suas metas nutricionais.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    planStore.generateAndSetActivePlan(target: currentEffectiveTarget)
+                    hapticTrigger += 1
+                }
+            } label: {
+                Label("Gerar Plano Diário", systemImage: "sparkles")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color.green)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity)
+        .background(Color.appCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func planSummaryHeader(plan: DailyMealPlan) -> some View {
+        VStack(spacing: 10) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("PLANO NUTRICIONAL CALCULADO")
+                    Text("PLANO NUTRICIONAL TBCA CALCULADO")
                         .font(.caption.bold())
                         .foregroundColor(.secondary)
-                    Text("\(Int(targetCalories)) kcal planejadas")
+                    Text("\(Int(plan.totalCalories)) kcal planejadas")
                         .font(.title3.bold())
                         .foregroundColor(.primary)
                 }
                 Spacer()
                 Button {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        planMeals = PlannedMeal.samplePlan
+                        planStore.generateAndSetActivePlan(target: currentEffectiveTarget)
                         hapticTrigger += 1
                     }
                 } label: {
@@ -116,10 +185,10 @@ public struct MealPlanView: View {
             }
 
             HStack(spacing: 12) {
-                macroTargetBadge(title: "Proteína", value: "190g", color: .blue)
-                macroTargetBadge(title: "Carbos", value: "260g", color: .green)
-                macroTargetBadge(title: "Gorduras", value: "65g", color: .purple)
-                macroTargetBadge(title: "Fibras", value: "32g", color: .brown)
+                macroTargetBadge(title: "Proteína", value: "\(Int(plan.totalProtein))g", color: .blue)
+                macroTargetBadge(title: "Carbos", value: "\(Int(plan.totalCarbs))g", color: .green)
+                macroTargetBadge(title: "Gorduras", value: "\(Int(plan.totalFat))g", color: .purple)
+                macroTargetBadge(title: "Fibras", value: "\(Int(plan.totalFiber))g", color: .brown)
             }
         }
         .padding(14)
@@ -144,9 +213,9 @@ public struct MealPlanView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(meal.mealType.rawValue)
+                    Text(meal.name.isEmpty ? meal.mealType.rawValue : meal.name)
                         .font(.headline)
-                    Text("\(meal.suggestedTime) • \(meal.percentageOfDaily)% do dia")
+                    Text("\(meal.suggestedTime) • Meta: \(Int(meal.targetCalories)) kcal")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -163,13 +232,14 @@ public struct MealPlanView: View {
 
             Divider()
 
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 ForEach(meal.items) { item in
                     HStack(alignment: .center) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(item.name)
+                            Text(item.food.name)
                                 .font(.subheadline.weight(.medium))
-                            Text("\(item.portionDescription) (\(Int(item.weightGrams))g) • \(Int(item.calories)) kcal")
+                            let portionText = item.portionName ?? "\(Int(item.amount)) \(item.unit)"
+                            Text("\(portionText) (\(Int(item.amount))g) • \(Int(item.calories)) kcal")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -177,7 +247,7 @@ public struct MealPlanView: View {
                         Spacer()
 
                         Button {
-                            selectedItemForSubstitution = item
+                            itemToSubstitute = SubstitutionTarget(mealId: meal.id, item: item)
                             hapticTrigger += 1
                         } label: {
                             HStack(spacing: 4) {
@@ -203,67 +273,24 @@ public struct MealPlanView: View {
         .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
     }
 
-    // MARK: - 3. Lista de Compras (Hortifrúti, Carnes, Mercearia, Laticínios)
+    // MARK: - 3. Lista de Compras (Hortifrúti, Carnes e Ovos, Laticínios, Mercearia)
 
     private var groceriesView: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Barra de Progresso do Mercado
-                groceryProgressBar
+                if let list = planStore.groceryList, !list.items.isEmpty {
+                    // Barra de Progresso do Mercado
+                    groceryProgressBar(list: list)
 
-                // Categorias por Departamento
-                ForEach(groceryCategories.indices, id: \.self) { catIdx in
-                    let category = groceryCategories[catIdx]
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Image(systemName: category.icon)
-                                .foregroundColor(.green)
-                            Text(category.name.uppercased())
-                                .font(.caption.bold())
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Text("\(category.items.filter(\.isChecked).count)/\(category.items.count)")
-                                .font(.caption.bold())
-                                .foregroundColor(.secondary)
-                        }
-
-                        VStack(spacing: 8) {
-                            ForEach(category.items.indices, id: \.self) { itemIdx in
-                                let item = category.items[itemIdx]
-                                Button {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                        groceryCategories[catIdx].items[itemIdx].isChecked.toggle()
-                                        hapticTrigger += 1
-                                    }
-                                } label: {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
-                                            .font(.title3)
-                                            .foregroundColor(item.isChecked ? .green : .secondary)
-
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(item.name)
-                                                .font(.subheadline.weight(item.isChecked ? .regular : .semibold))
-                                                .strikethrough(item.isChecked)
-                                                .foregroundColor(item.isChecked ? .secondary : .primary)
-                                            Text(item.quantity)
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
-                                        }
-
-                                        Spacer()
-                                    }
-                                    .padding(12)
-                                    .background(Color.appCardBackground)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                }
-                                .buttonStyle(.plain)
-                            }
+                    // Categorias por Departamento do Core
+                    ForEach(GroceryCategory.allCases, id: \.self) { category in
+                        let items = list.items.filter { $0.category == category }
+                        if !items.isEmpty {
+                            groceryCategorySection(category: category, items: items)
                         }
                     }
-                    .padding(14)
-                    .background(Color.appBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                } else {
+                    emptyGroceriesView
                 }
             }
             .padding()
@@ -271,9 +298,45 @@ public struct MealPlanView: View {
         }
     }
 
-    private var groceryProgressBar: some View {
-        let totalItems = groceryCategories.reduce(0) { $0 + $1.items.count }
-        let checkedItems = groceryCategories.reduce(0) { $0 + $1.items.filter(\.isChecked).count }
+    private var emptyGroceriesView: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "cart.badge.questionmark")
+                .font(.system(size: 48))
+                .foregroundColor(.green)
+            Text("Lista de compras vazia")
+                .font(.headline)
+            Text("Consolide todos os ingredientes do seu plano alimentar semanal com um único toque.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    if planStore.activePlan == nil {
+                        planStore.generateAndSetActivePlan(target: currentEffectiveTarget)
+                    } else {
+                        planStore.generateGroceryList(numberOfDays: 7)
+                    }
+                    hapticTrigger += 1
+                }
+            } label: {
+                Label("Gerar Lista Semanal (7 dias)", systemImage: "cart.fill")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color.green)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity)
+        .background(Color.appCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func groceryProgressBar(list: GroceryList) -> some View {
+        let totalItems = list.items.count
+        let checkedItems = list.items.filter(\.isChecked).count
         let progress = totalItems > 0 ? Double(checkedItems) / Double(totalItems) : 0.0
 
         return VStack(alignment: .leading, spacing: 8) {
@@ -295,12 +358,10 @@ public struct MealPlanView: View {
                     .foregroundColor(.secondary)
                 Spacer()
                 Button("Desmarcar Todos") {
-                    for i in groceryCategories.indices {
-                        for j in groceryCategories[i].items.indices {
-                            groceryCategories[i].items[j].isChecked = false
-                        }
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        planStore.uncheckAllGroceryItems()
+                        hapticTrigger += 1
                     }
-                    hapticTrigger += 1
                 }
                 .font(.caption2.bold())
                 .foregroundColor(.secondary)
@@ -308,6 +369,59 @@ public struct MealPlanView: View {
         }
         .padding(14)
         .background(Color.appCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func groceryCategorySection(category: GroceryCategory, items: [GroceryItem]) -> some View {
+        let checkedCount = items.filter(\.isChecked).count
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: category.iconName)
+                    .foregroundColor(.green)
+                Text(category.rawValue.uppercased())
+                    .font(.caption.bold())
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("\(checkedCount)/\(items.count)")
+                    .font(.caption.bold())
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(spacing: 8) {
+                ForEach(items) { item in
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            planStore.toggleGroceryItem(id: item.id)
+                            hapticTrigger += 1
+                        }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
+                                .font(.title3)
+                                .foregroundColor(item.isChecked ? .green : .secondary)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.name)
+                                    .font(.subheadline.weight(item.isChecked ? .regular : .semibold))
+                                    .strikethrough(item.isChecked)
+                                    .foregroundColor(item.isChecked ? .secondary : .primary)
+                                Text(item.formattedQuantity)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(Color.appCardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.appBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
@@ -369,7 +483,7 @@ public struct MealPlanView: View {
                 Image(systemName: "sparkles")
                     .foregroundColor(.yellow)
                     .font(.caption)
-                Text("PERGUNTAS FREQUENTES (1 TOQUE)")
+                Text("PERGUNTAS RÁPIDAS (1 TOQUE)")
                     .font(.caption.bold())
                     .foregroundColor(.secondary)
             }
@@ -377,7 +491,7 @@ public struct MealPlanView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     assistantChip(text: "Como está meu dia?")
-                    assistantChip(text: "O que comer no jantar?")
+                    assistantChip(text: "O que comer agora?")
                     assistantChip(text: "Vou comer pizza hoje")
                     assistantChip(text: "Lanche proteico rápido")
                 }
@@ -462,61 +576,27 @@ public struct MealPlanView: View {
         assistantInput = ""
         hapticTrigger += 1
 
-        // Geração sucinta contextual de até 4 linhas
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            let reply = generateSuccinctReply(for: clean)
-            assistantMessages.append(reply)
+        // Invocação ao motor SuccinctAssistantEngine do Core com limite de 4 linhas
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            let answer = SuccinctAssistantEngine.shared.answer(
+                query: clean,
+                profileStore: profileStore,
+                mealStore: mealStore,
+                waterStore: waterStore
+            )
+            assistantMessages.append(
+                AssistantChatMessage(
+                    text: answer.fullText,
+                    isUser: false,
+                    nextAction: answer.nextAction
+                )
+            )
             hapticTrigger += 1
-        }
-    }
-
-    private func generateSuccinctReply(for prompt: String) -> AssistantChatMessage {
-        let lower = prompt.lowercased()
-        let todayTotals = mealStore.dailyTotals(for: Date())
-        let waterTotal = waterStore.totalWater(for: Date())
-        let targetProt = profileStore.currentTarget?.proteinGrams ?? 180.0
-        let remainingProt = max(0, targetProt - todayTotals.proteinGrams)
-
-        if lower.contains("como está") || lower.contains("meu dia") {
-            return AssistantChatMessage(
-                text: "Você consumiu \(Int(todayTotals.calories)) kcal (\(Int(todayTotals.proteinGrams))g proteína) e \(Int(waterTotal)) ml de água.\nSeu ritmo está dentro do planejado para o objetivo de recomposição.\nFaltam \(Int(remainingProt))g de proteína para fechar a meta do dia.",
-                isUser: false,
-                nextAction: "Planejar jantar proteico e beber 400ml de água"
-            )
-        } else if lower.contains("jantar") || lower.contains("comer") {
-            let chicken = Int((remainingProt / 0.315).rounded())
-            return AssistantChatMessage(
-                text: "Para fechar sua meta com precisão, monte seu prato com:\n• \(chicken)g de filé de frango grelhado ou 150g de patinho moído;\n• 120g de arroz ou batata e salada verde à vontade com azeite.",
-                isUser: false,
-                nextAction: "Registrar o jantar com o botão de texto rápido"
-            )
-        } else if lower.contains("pizza") {
-            return AssistantChatMessage(
-                text: "Sem problemas! Limite a 2 fatias finas à noite.\nReduza os carboidratos da tarde e garanta sua proteína mais cedo.\nBeba 500ml extras de água para combater a retenção de sódio.",
-                isUser: false,
-                nextAction: "Fazer lanche da tarde só com whey e água"
-            )
-        } else {
-            return AssistantChatMessage(
-                text: "Opção rápida: 1 scoop de Whey (30g) + 1 banana média ou 3 ovos mexidos.\nFornece 25g a 30g de proteína de alto valor biológico em menos de 3 minutos.\nIdeal para manter o ritmo sem ultrapassar a meta de gordura.",
-                isUser: false,
-                nextAction: "Consumir a proteína agora para manter o pacing"
-            )
-        }
-    }
-
-    private func applySubstitution(baseItem: PlannedFoodItem, with substitute: PlannedFoodItem) {
-        for mIdx in planMeals.indices {
-            if let itemIdx = planMeals[mIdx].items.firstIndex(where: { $0.id == baseItem.id }) {
-                planMeals[mIdx].items[itemIdx] = substitute
-                hapticTrigger += 1
-                break
-            }
         }
     }
 }
 
-// MARK: - Modelos de Dados da Tela
+// MARK: - Modelos de Dados e Auxiliares da Tela
 
 public enum PlanViewSegment: String, CaseIterable, Identifiable {
     case plan = "Plano Diário"
@@ -534,160 +614,29 @@ public enum PlanViewSegment: String, CaseIterable, Identifiable {
     }
 }
 
-public struct PlannedFoodItem: Identifiable, Sendable, Equatable {
-    public let id: UUID
-    public var name: String
-    public var portionDescription: String
-    public var weightGrams: Double
-    public var calories: Double
-    public var proteinGrams: Double
-    public var carbsGrams: Double
-    public var fatGrams: Double
-
-    public init(
-        id: UUID = UUID(),
-        name: String,
-        portionDescription: String,
-        weightGrams: Double,
-        calories: Double,
-        proteinGrams: Double,
-        carbsGrams: Double,
-        fatGrams: Double
-    ) {
-        self.id = id
-        self.name = name
-        self.portionDescription = portionDescription
-        self.weightGrams = weightGrams
-        self.calories = calories
-        self.proteinGrams = proteinGrams
-        self.carbsGrams = carbsGrams
-        self.fatGrams = fatGrams
-    }
-}
-
-public struct PlannedMeal: Identifiable, Sendable {
-    public let id: UUID = UUID()
-    public var mealType: MealType
-    public var suggestedTime: String
-    public var percentageOfDaily: Int
-    public var items: [PlannedFoodItem]
-
-    public var totalCalories: Double { items.reduce(0) { $0 + $1.calories } }
-    public var totalProtein: Double { items.reduce(0) { $0 + $1.proteinGrams } }
-    public var totalCarbs: Double { items.reduce(0) { $0 + $1.carbsGrams } }
-    public var totalFat: Double { items.reduce(0) { $0 + $1.fatGrams } }
-
-    public static var samplePlan: [PlannedMeal] {
-        [
-            PlannedMeal(
-                mealType: .breakfast,
-                suggestedTime: "07:30",
-                percentageOfDaily: 25,
-                items: [
-                    PlannedFoodItem(name: "Ovo de galinha cozido/mexido", portionDescription: "3 unidades", weightGrams: 150, calories: 219, proteinGrams: 20, carbsGrams: 1, fatGrams: 14),
-                    PlannedFoodItem(name: "Pão francês", portionDescription: "1 unidade", weightGrams: 50, calories: 150, proteinGrams: 4, carbsGrams: 29, fatGrams: 1),
-                    PlannedFoodItem(name: "Café sem açúcar", portionDescription: "1 xícara", weightGrams: 100, calories: 2, proteinGrams: 0, carbsGrams: 0, fatGrams: 0)
-                ]
-            ),
-            PlannedMeal(
-                mealType: .lunch,
-                suggestedTime: "12:30",
-                percentageOfDaily: 35,
-                items: [
-                    PlannedFoodItem(name: "Peito de frango grelhado", portionDescription: "1 filé grande", weightGrams: 160, calories: 260, proteinGrams: 50, carbsGrams: 0, fatGrams: 5),
-                    PlannedFoodItem(name: "Arroz branco cozido", portionDescription: "4 colheres de sopa", weightGrams: 140, calories: 180, proteinGrams: 3, carbsGrams: 39, fatGrams: 0),
-                    PlannedFoodItem(name: "Feijão carioca cozido", portionDescription: "1 concha média", weightGrams: 130, calories: 99, proteinGrams: 6, carbsGrams: 18, fatGrams: 1)
-                ]
-            ),
-            PlannedMeal(
-                mealType: .afternoonSnack,
-                suggestedTime: "16:00",
-                percentageOfDaily: 15,
-                items: [
-                    PlannedFoodItem(name: "Whey Protein Concentrado", portionDescription: "1 scoop", weightGrams: 30, calories: 120, proteinGrams: 24, carbsGrams: 2, fatGrams: 1.5),
-                    PlannedFoodItem(name: "Banana prata", portionDescription: "1 unidade média", weightGrams: 90, calories: 88, proteinGrams: 1, carbsGrams: 23, fatGrams: 0)
-                ]
-            ),
-            PlannedMeal(
-                mealType: .dinner,
-                suggestedTime: "20:00",
-                percentageOfDaily: 25,
-                items: [
-                    PlannedFoodItem(name: "Patinho bovino moído grelhado", portionDescription: "1 porção média", weightGrams: 150, calories: 290, proteinGrams: 42, carbsGrams: 0, fatGrams: 12),
-                    PlannedFoodItem(name: "Batata inglesa cozida", portionDescription: "2 unidades médias", weightGrams: 180, calories: 144, proteinGrams: 3, carbsGrams: 32, fatGrams: 0)
-                ]
-            )
-        ]
-    }
-}
-
-public struct GroceryItem: Identifiable, Sendable {
-    public let id: UUID = UUID()
-    public var name: String
-    public var quantity: String
-    public var isChecked: Bool = false
-}
-
-public struct GroceryCategory: Identifiable, Sendable {
-    public let id: UUID = UUID()
-    public var name: String
-    public var icon: String
-    public var items: [GroceryItem]
-
-    public static var sampleCategories: [GroceryCategory] {
-        [
-            GroceryCategory(
-                name: "Hortifrúti",
-                icon: "carrot.fill",
-                items: [
-                    GroceryItem(name: "Bananas prata", quantity: "1 dúzia (1 kg)"),
-                    GroceryItem(name: "Batata inglesa", quantity: "1.5 kg"),
-                    GroceryItem(name: "Tomate e alface", quantity: "1 maço + 4 unid")
-                ]
-            ),
-            GroceryCategory(
-                name: "Carnes & Ovos",
-                icon: "fork.knife",
-                items: [
-                    GroceryItem(name: "Peito de frango filé", quantity: "1.2 kg"),
-                    GroceryItem(name: "Patinho bovino moído", quantity: "1.0 kg"),
-                    GroceryItem(name: "Ovos brancos", quantity: "2 dúzias (24 unid)")
-                ]
-            ),
-            GroceryCategory(
-                name: "Mercearia",
-                icon: "bag.fill",
-                items: [
-                    GroceryItem(name: "Arroz branco ou integral", quantity: "1 pacote (1 kg)"),
-                    GroceryItem(name: "Feijão carioca", quantity: "1 pacote (1 kg)"),
-                    GroceryItem(name: "Pão francês ou integral", quantity: "1 pacote")
-                ]
-            ),
-            GroceryCategory(
-                name: "Laticínios & Suplementos",
-                icon: "cup.and.saucer.fill",
-                items: [
-                    GroceryItem(name: "Whey Protein Concentrado", quantity: "1 pote (900g)")
-                ]
-            )
-        ]
-    }
-}
-
 public struct AssistantChatMessage: Identifiable, Sendable {
-    public let id: UUID = UUID()
+    public let id: UUID
     public var text: String
     public var isUser: Bool
     public var nextAction: String?
 
-    public static var sampleMessages: [AssistantChatMessage] {
-        [
-            AssistantChatMessage(
-                text: "Olá! Sou seu assistente de bolso NutriPilot.\nRespondo qualquer dúvida em no máximo 4 linhas diretas.\nSeu foco hoje é bater a meta de proteínas sem estourar calorias.",
-                isUser: false,
-                nextAction: "Consultar seu status de hoje ou conferir o plano"
-            )
-        ]
+    public init(id: UUID = UUID(), text: String, isUser: Bool, nextAction: String? = nil) {
+        self.id = id
+        self.text = text
+        self.isUser = isUser
+        self.nextAction = nextAction
+    }
+}
+
+public struct SubstitutionTarget: Identifiable, Sendable {
+    public let mealId: UUID
+    public let item: PlannedMealItem
+
+    public var id: UUID { item.id }
+
+    public init(mealId: UUID, item: PlannedMealItem) {
+        self.mealId = mealId
+        self.item = item
     }
 }
 
@@ -696,14 +645,11 @@ public struct AssistantChatMessage: Identifiable, Sendable {
 private struct FoodSubstitutionSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    let baseItem: PlannedFoodItem
-    let onConfirm: (PlannedFoodItem) -> Void
+    let target: SubstitutionTarget
+    let onConfirm: (PlannedMealItem) -> Void
 
     @State private var selectedIndex: Int = 0
-
-    private var substitutes: [PlannedFoodItem] {
-        generateSubstitutes(for: baseItem)
-    }
+    @State private var substitutes: [SubstitutionResult] = []
 
     var body: some View {
         NavigationStack {
@@ -717,18 +663,19 @@ private struct FoodSubstitutionSheet: View {
 
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(baseItem.name)
+                                Text(target.item.food.name)
                                     .font(.headline)
-                                Text("\(baseItem.portionDescription) (\(Int(baseItem.weightGrams))g)")
+                                let desc = target.item.portionName ?? "\(Int(target.item.amount)) \(target.item.unit)"
+                                Text("\(desc) (\(Int(target.item.amount))g)")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
                             VStack(alignment: .trailing, spacing: 2) {
-                                Text("\(Int(baseItem.calories)) kcal")
+                                Text("\(Int(target.item.calories)) kcal")
                                     .font(.headline)
                                     .foregroundColor(.orange)
-                                Text("P: \(Int(baseItem.proteinGrams))g | C: \(Int(baseItem.carbsGrams))g")
+                                Text("P: \(Int(target.item.proteinGrams))g | C: \(Int(target.item.carbsGrams))g | G: \(Int(target.item.fatGrams))g")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -738,79 +685,111 @@ private struct FoodSubstitutionSheet: View {
                     .background(Color.appCardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
 
-                    // Equivalências Calculadas (Dietbox/Avanutri)
+                    // Equivalências Calculadas pelo FoodSubstitutionEngine da TBCA
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Text("SUBSTITUTOS EQUIVALENTES CALCULADOS")
                                 .font(.caption.bold())
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("Mesmos macronutrientes")
-                                .font(.caption2)
-                                .foregroundColor(.green)
+                            if let first = substitutes.first {
+                                Text(first.group.anchorMacroDescription)
+                                    .font(.caption2.bold())
+                                    .foregroundColor(.green)
+                            }
                         }
 
-                        VStack(spacing: 8) {
-                            ForEach(substitutes.indices, id: \.self) { idx in
-                                let sub = substitutes[idx]
-                                Button {
-                                    selectedIndex = idx
-                                } label: {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(sub.name)
-                                                .font(.subheadline.bold())
-                                                .foregroundColor(.primary)
-                                            Text("\(sub.portionDescription) (\(Int(sub.weightGrams))g)")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
+                        if substitutes.isEmpty {
+                            VStack(spacing: 8) {
+                                Text("Nenhum substituto exato do mesmo grupo nutricional encontrado na TBCA.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.appCardBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        } else {
+                            VStack(spacing: 8) {
+                                ForEach(substitutes.indices, id: \.self) { idx in
+                                    let sub = substitutes[idx]
+                                    Button {
+                                        selectedIndex = idx
+                                    } label: {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(sub.substituteFood.name)
+                                                    .font(.subheadline.bold())
+                                                    .foregroundColor(.primary)
+                                                let pText = sub.suggestedPortion ?? "\(Int(sub.equivalentAmount)) \(sub.unit)"
+                                                Text("\(pText) (\(Int(sub.equivalentAmount))g)")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+
+                                            Spacer()
+
+                                            VStack(alignment: .trailing, spacing: 2) {
+                                                Text("\(Int(sub.substituteCalories)) kcal")
+                                                    .font(.subheadline.bold())
+                                                    .foregroundColor(.orange)
+                                                let deltaSign = sub.deltaCalories >= 0 ? "+" : ""
+                                                Text("Δ \(deltaSign)\(Int(sub.deltaCalories)) kcal")
+                                                    .font(.caption2)
+                                                    .foregroundColor(abs(sub.deltaCalories) <= 30 ? .green : .secondary)
+                                            }
+
+                                            Image(systemName: selectedIndex == idx ? "checkmark.circle.fill" : "circle")
+                                                .foregroundColor(selectedIndex == idx ? .green : .secondary)
+                                                .padding(.leading, 6)
                                         }
-
-                                        Spacer()
-
-                                        VStack(alignment: .trailing, spacing: 2) {
-                                            Text("\(Int(sub.calories)) kcal")
-                                                .font(.subheadline.bold())
-                                                .foregroundColor(.orange)
-                                            Text("P: \(Int(sub.proteinGrams))g | C: \(Int(sub.carbsGrams))g")
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
-                                        }
-
-                                        Image(systemName: selectedIndex == idx ? "checkmark.circle.fill" : "circle")
-                                            .foregroundColor(selectedIndex == idx ? .green : .secondary)
-                                            .padding(.leading, 6)
+                                        .padding(12)
+                                        .background(Color.appCardBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(selectedIndex == idx ? Color.green : Color.clear, lineWidth: 1.5)
+                                        )
                                     }
-                                    .padding(12)
-                                    .background(Color.appCardBackground)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(selectedIndex == idx ? Color.green : Color.clear, lineWidth: 1.5)
-                                    )
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
                     }
 
                     // Botão de Confirmação
-                    Button {
-                        if selectedIndex < substitutes.count {
-                            onConfirm(substitutes[selectedIndex])
-                            dismiss()
+                    if !substitutes.isEmpty {
+                        Button {
+                            if selectedIndex < substitutes.count {
+                                let chosen = substitutes[selectedIndex]
+                                let macros = chosen.substituteFood.calculatedFor(amount: chosen.equivalentAmount)
+                                let newItem = PlannedMealItem(
+                                    food: chosen.substituteFood,
+                                    amount: chosen.equivalentAmount,
+                                    unit: chosen.unit,
+                                    portionName: chosen.suggestedPortion,
+                                    calories: chosen.substituteCalories,
+                                    proteinGrams: macros.protein,
+                                    carbsGrams: macros.carbs,
+                                    fatGrams: macros.fat,
+                                    fiberGrams: macros.fiber
+                                )
+                                onConfirm(newItem)
+                                dismiss()
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: "arrow.2.squarepath")
+                                Text("Confirmar Substituição no Plano")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.green)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.2.squarepath")
-                            Text("Confirmar Substituição no Plano")
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.green)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                 }
                 .padding()
@@ -822,36 +801,13 @@ private struct FoodSubstitutionSheet: View {
                 }
             }
             .background(Color.appBackground)
+            .onAppear {
+                substitutes = FoodSubstitutionEngine.availableSubstitutes(
+                    for: target.item.food,
+                    amount: target.item.amount
+                )
+            }
         }
         .presentationDetents([.medium, .large])
-    }
-
-    private func generateSubstitutes(for item: PlannedFoodItem) -> [PlannedFoodItem] {
-        let nameLower = item.name.lowercased()
-
-        if nameLower.contains("frango") {
-            return [
-                PlannedFoodItem(name: "Patinho bovino grelhado", portionDescription: "1 bife médio", weightGrams: item.weightGrams * 0.95, calories: 240, proteinGrams: 48, carbsGrams: 0, fatGrams: 6),
-                PlannedFoodItem(name: "Tilápia grelhada", portionDescription: "1 filé grande", weightGrams: item.weightGrams * 1.2, calories: 230, proteinGrams: 49, carbsGrams: 0, fatGrams: 3),
-                PlannedFoodItem(name: "Ovos inteiros cozidos", portionDescription: "4 unidades", weightGrams: 200, calories: 290, proteinGrams: 26, carbsGrams: 1, fatGrams: 19)
-            ]
-        } else if nameLower.contains("arroz") {
-            return [
-                PlannedFoodItem(name: "Batata doce cozida", portionDescription: "1 unidade grande", weightGrams: item.weightGrams * 1.35, calories: 175, proteinGrams: 2, carbsGrams: 40, fatGrams: 0),
-                PlannedFoodItem(name: "Mandioca (aipim) cozida", portionDescription: "2 pedaços médios", weightGrams: item.weightGrams * 0.9, calories: 185, proteinGrams: 2, carbsGrams: 41, fatGrams: 0),
-                PlannedFoodItem(name: "Macarrão cozido", portionDescription: "1 xícara", weightGrams: item.weightGrams * 0.95, calories: 180, proteinGrams: 6, carbsGrams: 37, fatGrams: 1)
-            ]
-        } else if nameLower.contains("pão") {
-            return [
-                PlannedFoodItem(name: "Tapioca (goma hidratada)", portionDescription: "3 colheres de sopa", weightGrams: 60, calories: 145, proteinGrams: 0, carbsGrams: 35, fatGrams: 0),
-                PlannedFoodItem(name: "Aveia em flocos finos", portionDescription: "4 colheres de sopa", weightGrams: 40, calories: 155, proteinGrams: 6, carbsGrams: 26, fatGrams: 3),
-                PlannedFoodItem(name: "Cuscuz de milho cozido", portionDescription: "1 fatia média", weightGrams: 100, calories: 115, proteinGrams: 2, carbsGrams: 25, fatGrams: 0)
-            ]
-        } else {
-            return [
-                PlannedFoodItem(name: "Opção Equilibrada 1", portionDescription: "1 porção equivalente", weightGrams: item.weightGrams, calories: item.calories, proteinGrams: item.proteinGrams, carbsGrams: item.carbsGrams, fatGrams: item.fatGrams),
-                PlannedFoodItem(name: "Opção Equilibrada 2", portionDescription: "1 porção equivalente", weightGrams: item.weightGrams * 1.1, calories: item.calories, proteinGrams: item.proteinGrams, carbsGrams: item.carbsGrams, fatGrams: item.fatGrams)
-            ]
-        }
     }
 }

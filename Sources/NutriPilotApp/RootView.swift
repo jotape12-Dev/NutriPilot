@@ -6,6 +6,7 @@ public struct RootView: View {
     @State private var waterStore = WaterStore.shared
     @State private var mealStore = MealStore.shared
     @State private var bodyStore = BodyMeasurementStore.shared
+    @State private var planStore = MealPlanStore.shared
     @State private var selectedTab: AppTab = .dashboard
 
     public init() {}
@@ -54,7 +55,8 @@ public struct RootView: View {
                         targetCalories: target.calories,
                         mealStore: mealStore,
                         waterStore: waterStore,
-                        profileStore: store
+                        profileStore: store,
+                        planStore: planStore
                     )
                         .tabItem {
                             Label("Plano", systemImage: "list.clipboard.fill")

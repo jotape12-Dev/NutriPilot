@@ -80,6 +80,52 @@ public final class MealPlanStore: @unchecked Sendable {
         }
     }
 
+    public func uncheckAllGroceryItems() {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard var list = groceryList else { return }
+        for i in list.items.indices {
+            list.items[i].isChecked = false
+        }
+        self.groceryList = list
+        persistToDisk()
+    }
+
+    public func replaceItem(mealId: UUID, oldItemId: UUID, with newItem: PlannedMealItem) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let plan = activePlan else { return }
+        var updatedMeals = plan.meals
+        guard let mealIdx = updatedMeals.firstIndex(where: { $0.id == mealId }) else { return }
+        var updatedItems = updatedMeals[mealIdx].items
+        guard let itemIdx = updatedItems.firstIndex(where: { $0.id == oldItemId }) else { return }
+        updatedItems[itemIdx] = newItem
+
+        let oldMeal = updatedMeals[mealIdx]
+        updatedMeals[mealIdx] = PlannedMeal(
+            id: oldMeal.id,
+            mealType: oldMeal.mealType,
+            name: oldMeal.name,
+            suggestedTime: oldMeal.suggestedTime,
+            targetCalories: oldMeal.targetCalories,
+            items: updatedItems
+        )
+
+        let updatedPlan = DailyMealPlan(
+            id: plan.id,
+            createdAt: plan.createdAt,
+            targetCalories: plan.targetCalories,
+            targetProteinGrams: plan.targetProteinGrams,
+            targetCarbsGrams: plan.targetCarbsGrams,
+            targetFatGrams: plan.targetFatGrams,
+            targetFiberGrams: plan.targetFiberGrams,
+            meals: updatedMeals
+        )
+        setActivePlan(updatedPlan)
+    }
+
     public func clear() {
         lock.lock()
         defer { lock.unlock() }
