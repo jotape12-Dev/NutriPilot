@@ -5,6 +5,7 @@ public struct RootView: View {
     @State private var store = ProfileStore.shared
     @State private var waterStore = WaterStore.shared
     @State private var mealStore = MealStore.shared
+    @State private var bodyStore = BodyMeasurementStore.shared
     @State private var selectedTab: AppTab = .dashboard
 
     public init() {}
@@ -17,7 +18,8 @@ public struct RootView: View {
                         profile: profile,
                         target: target,
                         waterStore: waterStore,
-                        mealStore: mealStore
+                        mealStore: mealStore,
+                        bodyStore: bodyStore
                     )
                     .tabItem {
                         Label("Hoje", systemImage: "bolt.fill")
@@ -39,11 +41,14 @@ public struct RootView: View {
                     }
                     .tag(AppTab.water)
 
-                    BodyProgressView()
-                        .tabItem {
-                            Label("Corpo", systemImage: "figure.walk")
-                        }
-                        .tag(AppTab.body)
+                    BodyProgressView(
+                        bodyStore: bodyStore,
+                        profileStore: store
+                    )
+                    .tabItem {
+                        Label("Corpo", systemImage: "figure.walk")
+                    }
+                    .tag(AppTab.body)
 
                     MealPlanView(targetCalories: target.calories)
                         .tabItem {

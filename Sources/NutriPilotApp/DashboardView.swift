@@ -6,6 +6,7 @@ public struct DashboardView: View {
     public let target: NutritionTarget
     public var waterStore: WaterStore
     public var mealStore: MealStore
+    public var bodyStore: BodyMeasurementStore
     public var parserEngine: MealParserEngine
 
     @State private var isShowingTextLogModal: Bool = false
@@ -16,12 +17,14 @@ public struct DashboardView: View {
         target: NutritionTarget,
         waterStore: WaterStore = .shared,
         mealStore: MealStore = .shared,
+        bodyStore: BodyMeasurementStore = .shared,
         parserEngine: MealParserEngine = .shared
     ) {
         self.profile = profile
         self.target = target
         self.waterStore = waterStore
         self.mealStore = mealStore
+        self.bodyStore = bodyStore
         self.parserEngine = parserEngine
     }
 
@@ -45,10 +48,25 @@ public struct DashboardView: View {
         waterStore.reminderStatus(at: Date(), targetWaterMl: target.waterMl)
     }
 
+    private var currentTrendWeight: Double {
+        bodyStore.currentTrendWeight(spanDays: 7) ?? profile.currentWeightKg
+    }
+
+    private var weeklyWeightDelta: Double? {
+        bodyStore.weeklyVelocity(daysWindow: 14)
+    }
+
+    private var latestWeight: Double {
+        bodyStore.latestMeasurement?.weightKg ?? profile.currentWeightKg
+    }
+
     public var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    // Card de Peso de Tendência (EWMA) & Ritmo Semanal (Fase 4)
+                    weightTrendSummaryCard
+
                     // Card da Próxima Ação Recomendada (Inteligência Dinâmica)
                     nextActionCard
 
@@ -85,6 +103,70 @@ public struct DashboardView: View {
                 )
             }
         }
+    }
+
+    // MARK: - Card de Peso de Tendência (EWMA) & Ritmo Semanal
+
+    private var weightTrendSummaryCard: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.green.opacity(0.12))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "waveform.path.ecg")
+                    .foregroundColor(.green)
+                    .font(.headline)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("PESO DE TENDÊNCIA")
+                    .font(.caption2.bold())
+                    .foregroundColor(.secondary)
+
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(String(format: "%.1f kg", currentTrendWeight))
+                        .font(.title2.bold())
+                        .foregroundColor(.primary)
+
+                    Text("última: \(String(format: "%.1f kg", latestWeight))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+
+            if let delta = weeklyWeightDelta {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("RITMO")
+                        .font(.caption2.bold())
+                        .foregroundColor(.secondary)
+
+                    HStack(spacing: 3) {
+                        Image(systemName: delta <= 0 ? "arrow.down.right" : "arrow.up.right")
+                        Text(String(format: "%+.1f kg/sem", delta))
+                    }
+                    .font(.caption.bold())
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(delta <= 0 ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
+                    .foregroundColor(delta <= 0 ? .green : .orange)
+                    .clipShape(Capsule())
+                }
+            } else {
+                Text("Estável")
+                    .font(.caption.bold())
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.green.opacity(0.15))
+                    .foregroundColor(.green)
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(14)
+        .background(Color.appCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
     }
 
     // MARK: - Card da Próxima Ação
