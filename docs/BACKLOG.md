@@ -36,11 +36,11 @@
 
 ---
 
-## Fase 4 — Evolução Corporal e Calibração
-- [ ] **T-018:** Registro de peso com gráfico de tendência (média móvel semanal de 7, 30 e 90 dias).
-- [ ] **T-019:** Registro de medidas corporais (cintura, quadril, braço, etc.).
-- [ ] **T-020:** Registro de fotos padronizadas locais e entrada de bioimpedância.
-- [ ] **T-021:** Motor de calibração pessoal de estimativa de gordura.
+## Fase 4 — Evolução Corporal e Calibração [CONCLUÍDO]
+- [x] **T-018:** Registro de peso com gráfico de tendência EWMA (7, 30 e 90 dias) e predição Nutrium (`WeightTrendCalculator`).
+- [x] **T-019:** Registro de medidas corporais (cintura, quadril, braço, tórax, coxa) (`BodyMeasurementStore`).
+- [x] **T-020:** Registro de entrada de bioimpedância e persistência em disco JSON.
+- [x] **T-021:** Motor de avaliação antropométrica com Jackson & Pollock 3 e 7 dobras e Equação de Siri (`BodyCompositionCalculator`).
 
 ---
 
