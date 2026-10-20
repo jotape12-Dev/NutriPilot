@@ -1,7 +1,7 @@
 import Foundation
 
 /// Resultado detalhado do cálculo de macronutrientes para uma porção ou gramatura de alimento.
-public struct MacroBreakdown: Sendable, Equatable {
+public struct MacroBreakdown: Codable, Sendable, Equatable {
     public let calories: Double
     public let proteinGrams: Double
     public let carbsGrams: Double
@@ -40,6 +40,19 @@ public final class FoodSearchEngine: Sendable {
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "pt_BR"))
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
+    }
+
+    /// Reduz palavras no plural para o singular básico em português para correspondência flexível (ex: ovos -> ovo, bananas -> banana).
+    public static func stemPT(_ word: String) -> String {
+        let w = normalize(word)
+        if w == "paes" || w == "pao" { return "pao" }
+        if w.hasSuffix("es") && w.count > 4 {
+            return String(w.dropLast(2))
+        }
+        if w.hasSuffix("s") && w.count > 3 {
+            return String(w.dropLast())
+        }
+        return w
     }
 
     /// Executa busca na base de alimentos com ranqueamento inteligente de relevância.
@@ -84,12 +97,19 @@ public final class FoodSearchEngine: Sendable {
                 score += max(0, 40 - item.name.count)
             }
 
-            // 4. Correspondência de tokens individuais (ex: "arroz" e "branco")
+            // 4. Correspondência de tokens individuais com suporte a singular/plural (ex: "ovos" -> "ovo")
+            let nameTokens = normalizedName
+                .components(separatedBy: CharacterSet.whitespacesAndNewlines)
+                .filter { !$0.isEmpty }
+            let nameStems = nameTokens.map { Self.stemPT($0) }
+
             var matchedTokens = 0
             for token in queryTokens {
-                if normalizedName.contains(token) {
+                let tokenStem = Self.stemPT(token)
+                if normalizedName.contains(token) || normalizedName.contains(tokenStem) ||
+                   nameTokens.contains(token) || nameStems.contains(tokenStem) {
                     matchedTokens += 1
-                } else if normalizedBrand.contains(token) {
+                } else if !normalizedBrand.isEmpty && (normalizedBrand.contains(token) || normalizedBrand.contains(tokenStem)) {
                     matchedTokens += 1
                 }
             }

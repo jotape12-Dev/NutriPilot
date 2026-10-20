@@ -600,6 +600,22 @@ public enum TBCAFoodDatabase {
             ]
         ),
         FoodItem(
+            name: "Abacate",
+            servingSize: 100.0,
+            servingUnit: "g",
+            calories: 96.0,
+            proteinGrams: 1.2,
+            carbsGrams: 6.0,
+            fatGrams: 8.4,
+            fiberGrams: 6.3,
+            source: "TBCA",
+            portions: [
+                FoodPortion(name: "Metade média", gramWeight: 100.0, description: "1/2 abacate médio (100g)"),
+                FoodPortion(name: "Colher de sopa cheia", gramWeight: 35.0, description: "1 colher de sopa (35g)"),
+                FoodPortion(name: "Unidade inteira", gramWeight: 200.0, description: "1 abacate médio inteiro (200g)")
+            ]
+        ),
+        FoodItem(
             name: "Café preto sem açúcar",
             servingSize: 100.0,
             servingUnit: "ml",
