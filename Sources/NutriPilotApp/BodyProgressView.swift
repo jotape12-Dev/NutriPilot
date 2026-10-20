@@ -13,6 +13,7 @@ public struct BodyProgressView: View {
     @State private var isShowingWeighInSheet: Bool = false
     @State private var isShowingCircumferenceSheet: Bool = false
     @State private var isShowingSkinfoldSheet: Bool = false
+    @State private var isShowingExportSheet: Bool = false
     @State private var selectedAntropometryProtocol: AntropometryProtocol = .pollock7
     @State private var hapticTrigger: Int = 0
 
@@ -118,6 +119,24 @@ public struct BodyProgressView: View {
             .navigationTitle("Evolução Corporal")
             .background(Color.appBackground)
             .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        isShowingExportSheet = true
+                        hapticTrigger += 1
+                    } label: {
+                        Label("Exportar Relatório", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
+            .sheet(isPresented: $isShowingExportSheet) {
+                ReportExportView(
+                    profileStore: profileStore,
+                    mealStore: .shared,
+                    waterStore: .shared,
+                    bodyStore: bodyStore
+                )
+            }
             .sheet(isPresented: $isShowingWeighInSheet) {
                 WeighInSheet(initialWeight: latestWeight) { newWeight in
                     _ = bodyStore.logWeight(kg: newWeight)
