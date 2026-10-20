@@ -77,6 +77,12 @@ public final class WaterStore: @unchecked Sendable {
         return newLog
     }
 
+    /// Atalho conveniente para adicionar volume de água no dia atual.
+    @discardableResult
+    public func addWater(amount: Double) -> WaterLog {
+        addLog(amountMl: amount)
+    }
+
     public func removeLog(id: UUID) {
         lock.lock()
         defer { lock.unlock() }
@@ -119,6 +125,11 @@ public final class WaterStore: @unchecked Sendable {
     /// Calcula o volume total de água (em ml) consumido no dia especificado.
     public func totalWaterMl(for date: Date = Date()) -> Double {
         logs(for: date).reduce(0) { $0 + $1.amountMl }
+    }
+
+    /// Atalho para volume total de água do dia especificado.
+    public func totalWater(for date: Date = Date()) -> Double {
+        totalWaterMl(for: date)
     }
 
     /// Calcula a fração de progresso em relação à meta (ex: 0.75 para 75% da meta).

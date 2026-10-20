@@ -189,6 +189,11 @@ public final class MealStore: @unchecked Sendable {
         )
     }
 
+    /// Atalho para totais nutricionais do dia de hoje.
+    public func todayTotals() -> DayNutritionTotals {
+        dailyTotals(for: Date())
+    }
+
     /// Calcula os totais de um tipo específico de refeição em determinado dia.
     public func mealTotals(for date: Date = Date(), type: MealType) -> DayNutritionTotals {
         let filteredMeals = meals(for: date, type: type)

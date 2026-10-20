@@ -42,6 +42,9 @@ public struct FoodLoggingView: View {
                     // Seletor de Refeição Ativa
                     mealTypePicker
 
+                    // Seção de Favoritos / Recorrentes (1 Toque)
+                    favoritesSection
+
                     // Barra de Busca TBCA em Tempo Real
                     searchBarView
 
@@ -131,6 +134,112 @@ public struct FoodLoggingView: View {
             }
             .padding(.horizontal)
         }
+    }
+
+    private var favoritesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("FAVORITOS & RECORRENTES (1 TOQUE)")
+                .font(.caption.bold())
+                .foregroundColor(.secondary)
+                .padding(.horizontal)
+
+            if mealStore.favoriteMeals.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        sampleFavoriteButton(
+                            name: "Frango + Arroz + Feijão",
+                            mealType: .lunch,
+                            items: [
+                                MealLogItem(name: "Peito de frango grelhado (1 filé médio)", quantity: 100, unit: "g", calories: 163, proteinGrams: 31.5, carbsGrams: 0, fatGrams: 3.2),
+                                MealLogItem(name: "Arroz branco cozido (4 colheres)", quantity: 100, unit: "g", calories: 128, proteinGrams: 2.5, carbsGrams: 28.1, fatGrams: 0.2),
+                                MealLogItem(name: "Feijão carioca (1 concha média)", quantity: 130, unit: "g", calories: 99, proteinGrams: 6.2, carbsGrams: 17.7, fatGrams: 0.7)
+                            ]
+                        )
+
+                        sampleFavoriteButton(
+                            name: "Ovos Mexidos + Aveia",
+                            mealType: .breakfast,
+                            items: [
+                                MealLogItem(name: "Ovo de galinha cozido/mexido (2 unid)", quantity: 100, unit: "g", calories: 146, proteinGrams: 13.3, carbsGrams: 0.6, fatGrams: 9.5),
+                                MealLogItem(name: "Aveia em flocos (2 colheres)", quantity: 30, unit: "g", calories: 118, proteinGrams: 4.2, carbsGrams: 20.0, fatGrams: 2.6)
+                            ]
+                        )
+                    }
+                    .padding(.horizontal)
+                }
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(mealStore.favoriteMeals) { fav in
+                            Button {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                    _ = mealStore.logMeal(from: fav, overrideMealType: selectedMeal)
+                                    hapticTrigger += 1
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "star.fill")
+                                        .foregroundColor(.yellow)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(fav.name)
+                                            .font(.subheadline.bold())
+                                            .foregroundColor(.primary)
+                                        Text("\(Int(fav.totalCalories)) kcal • \(fav.items.count) itens")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(Color.appCardBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+        }
+    }
+
+    private func sampleFavoriteButton(name: String, mealType: MealType, items: [MealLogItem]) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                let meal = MealLog(
+                    date: Date(),
+                    mealType: selectedMeal,
+                    loggedAt: Date(),
+                    inputMethod: .favorite,
+                    rawInput: name,
+                    items: items,
+                    confirmedByUser: true
+                )
+                mealStore.addMeal(meal)
+                hapticTrigger += 1
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.yellow)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name)
+                        .font(.subheadline.bold())
+                        .foregroundColor(.primary)
+                    let totalKcal = Int(items.reduce(0) { $0 + $1.calories })
+                    Text("\(totalKcal) kcal • Sugestão rápida")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.appCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)
+        }
+        .buttonStyle(.plain)
     }
 
     private var searchBarView: some View {
@@ -264,6 +373,20 @@ public struct FoodLoggingView: View {
                                 Text("\(Int(meal.totalCalories)) kcal")
                                     .font(.headline)
                                     .foregroundColor(.orange)
+
+                                Button {
+                                    withAnimation {
+                                        _ = mealStore.saveMealAsFavorite(meal)
+                                        hapticTrigger += 1
+                                    }
+                                } label: {
+                                    Image(systemName: "star")
+                                        .font(.caption)
+                                        .foregroundColor(.yellow)
+                                }
+                                .buttonStyle(.borderless)
+                                .padding(.leading, 6)
+                                .help("Salvar como favorito")
 
                                 Button {
                                     withAnimation {

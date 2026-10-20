@@ -22,14 +22,14 @@ public struct DashboardView: View {
     }
 
     private var todayTotals: DayNutritionTotals {
-        mealStore.dailyTotals(for: Date())
+        mealStore.todayTotals()
     }
 
     private var consumedCalories: Double { todayTotals.calories }
     private var consumedProtein: Double { todayTotals.proteinGrams }
     private var consumedCarbs: Double { todayTotals.carbsGrams }
     private var consumedFat: Double { todayTotals.fatGrams }
-    private var consumedWaterMl: Double { waterStore.totalWaterMl(for: Date()) }
+    private var consumedWaterMl: Double { waterStore.totalWater(for: Date()) }
 
     private var remainingCalories: Double { max(0, target.calories - consumedCalories) }
     private var remainingProtein: Double { max(0, target.proteinGrams - consumedProtein) }
@@ -228,7 +228,7 @@ public struct DashboardView: View {
             HStack(spacing: 10) {
                 Button {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        _ = waterStore.addLog(amountMl: 250)
+                        _ = waterStore.addWater(amount: 250)
                         hapticTrigger += 1
                     }
                 } label: {
@@ -242,7 +242,7 @@ public struct DashboardView: View {
 
                 Button {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        _ = waterStore.addLog(amountMl: 500)
+                        _ = waterStore.addWater(amount: 500)
                         hapticTrigger += 1
                     }
                 } label: {

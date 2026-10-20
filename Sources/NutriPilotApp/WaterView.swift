@@ -17,7 +17,7 @@ public struct WaterView: View {
     }
 
     private var currentConsumed: Double {
-        store.totalWaterMl(for: Date())
+        store.totalWater(for: Date())
     }
 
     private var progressRatio: Double {
@@ -189,7 +189,7 @@ public struct WaterView: View {
     private func quickWaterButton(amount: Double, label: String, icon: String) -> some View {
         Button {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                _ = store.addLog(amountMl: amount)
+                _ = store.addWater(amount: amount)
                 hapticTrigger += 1
             }
         } label: {
