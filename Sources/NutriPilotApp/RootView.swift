@@ -3,6 +3,8 @@ import NutriPilotCore
 
 public struct RootView: View {
     @State private var store = ProfileStore.shared
+    @State private var waterStore = WaterStore.shared
+    @State private var mealStore = MealStore.shared
     @State private var selectedTab: AppTab = .dashboard
 
     public init() {}
@@ -11,23 +13,31 @@ public struct RootView: View {
         Group {
             if store.hasCompletedOnboarding, let profile = store.currentProfile, let target = store.currentTarget {
                 TabView(selection: $selectedTab) {
-                    DashboardView(profile: profile, target: target)
-                        .tabItem {
-                            Label("Hoje", systemImage: "bolt.fill")
-                        }
-                        .tag(AppTab.dashboard)
+                    DashboardView(
+                        profile: profile,
+                        target: target,
+                        waterStore: waterStore,
+                        mealStore: mealStore
+                    )
+                    .tabItem {
+                        Label("Hoje", systemImage: "bolt.fill")
+                    }
+                    .tag(AppTab.dashboard)
 
-                    FoodLoggingView()
+                    FoodLoggingView(mealStore: mealStore)
                         .tabItem {
                             Label("Comida", systemImage: "fork.knife")
                         }
                         .tag(AppTab.food)
 
-                    WaterView(targetWaterMl: target.waterMl)
-                        .tabItem {
-                            Label("Água", systemImage: "drop.fill")
-                        }
-                        .tag(AppTab.water)
+                    WaterView(
+                        targetWaterMl: target.waterMl,
+                        store: waterStore
+                    )
+                    .tabItem {
+                        Label("Água", systemImage: "drop.fill")
+                    }
+                    .tag(AppTab.water)
 
                     BodyProgressView()
                         .tabItem {
