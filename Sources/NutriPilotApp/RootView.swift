@@ -2,43 +2,50 @@ import SwiftUI
 import NutriPilotCore
 
 public struct RootView: View {
+    @State private var store = ProfileStore.shared
     @State private var selectedTab: AppTab = .dashboard
 
     public init() {}
 
     public var body: some View {
-        TabView(selection: $selectedTab) {
-            DashboardView()
-                .tabItem {
-                    Label("Hoje", systemImage: "bolt.fill")
-                }
-                .tag(AppTab.dashboard)
+        Group {
+            if store.hasCompletedOnboarding, let profile = store.currentProfile, let target = store.currentTarget {
+                TabView(selection: $selectedTab) {
+                    DashboardView(profile: profile, target: target)
+                        .tabItem {
+                            Label("Hoje", systemImage: "bolt.fill")
+                        }
+                        .tag(AppTab.dashboard)
 
-            FoodLoggingView()
-                .tabItem {
-                    Label("Comida", systemImage: "fork.knife")
-                }
-                .tag(AppTab.food)
+                    FoodLoggingView()
+                        .tabItem {
+                            Label("Comida", systemImage: "fork.knife")
+                        }
+                        .tag(AppTab.food)
 
-            WaterView()
-                .tabItem {
-                    Label("Água", systemImage: "drop.fill")
-                }
-                .tag(AppTab.water)
+                    WaterView(targetWaterMl: target.waterMl)
+                        .tabItem {
+                            Label("Água", systemImage: "drop.fill")
+                        }
+                        .tag(AppTab.water)
 
-            BodyProgressView()
-                .tabItem {
-                    Label("Corpo", systemImage: "figure.walk")
-                }
-                .tag(AppTab.body)
+                    BodyProgressView()
+                        .tabItem {
+                            Label("Corpo", systemImage: "figure.walk")
+                        }
+                        .tag(AppTab.body)
 
-            MealPlanView()
-                .tabItem {
-                    Label("Plano", systemImage: "list.clipboard.fill")
+                    MealPlanView(targetCalories: target.calories)
+                        .tabItem {
+                            Label("Plano", systemImage: "list.clipboard.fill")
+                        }
+                        .tag(AppTab.plan)
                 }
-                .tag(AppTab.plan)
+                .tint(.green)
+            } else {
+                OnboardingView(store: store)
+            }
         }
-        .tint(.green)
     }
 }
 

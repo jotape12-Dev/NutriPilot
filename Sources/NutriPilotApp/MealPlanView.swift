@@ -2,14 +2,17 @@ import SwiftUI
 import NutriPilotCore
 
 public struct MealPlanView: View {
+    public var targetCalories: Double
     @State private var showingShoppingList = false
 
-    public init() {}
+    public init(targetCalories: Double = 2500) {
+        self.targetCalories = targetCalories
+    }
 
     public var body: some View {
         NavigationStack {
             List {
-                Section("Plano de Hoje (2.500 kcal)") {
+                Section("Plano de Hoje (\(Int(targetCalories)) kcal)") {
                     mealRow(title: "Café da Manhã", items: "3 ovos mexidos, 2 fatias de pão integral, café preto", cals: 420, protein: 28)
                     mealRow(title: "Almoço", items: "200g peito de frango, 150g arroz branco, feijão e salada", cals: 680, protein: 55)
                     mealRow(title: "Lanche da Tarde", items: "1 dose Whey protein, 1 banana, 30g pasta de amendoim", cals: 390, protein: 32)
@@ -24,7 +27,7 @@ public struct MealPlanView: View {
                     }
 
                     Button {
-                        // Regenerar refeição
+                        // Regenerar opções do plano
                     } label: {
                         Label("Regenerar Opções do Plano", systemImage: "arrow.triangle.2.circlepath")
                     }

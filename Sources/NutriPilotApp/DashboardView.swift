@@ -2,14 +2,17 @@ import SwiftUI
 import NutriPilotCore
 
 public struct DashboardView: View {
-    @State private var consumedCalories: Double = 1750
-    @State private var targetCalories: Double = 2500
-    @State private var consumedProtein: Double = 142
-    @State private var targetProtein: Double = 170
-    @State private var consumedWaterMl: Double = 2200
-    @State private var targetWaterMl: Double = 3200
+    public let profile: UserProfile
+    public let target: NutritionTarget
 
-    public init() {}
+    @State private var consumedCalories: Double = 0
+    @State private var consumedProtein: Double = 0
+    @State private var consumedWaterMl: Double = 0
+
+    public init(profile: UserProfile, target: NutritionTarget) {
+        self.profile = profile
+        self.target = target
+    }
 
     public var body: some View {
         NavigationStack {
@@ -18,7 +21,7 @@ public struct DashboardView: View {
                     // Card da Próxima Ação (Core differentiator)
                     nextActionCard
 
-                    // Resumo Rápido de Macros & Calorias
+                    // Resumo Rápido de Macros & Calorias com dados reais
                     macroSummarySection
 
                     // Barra Rápida de Água
@@ -28,9 +31,17 @@ public struct DashboardView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Hoje")
+            .navigationTitle("Olá, \(profile.name)")
             .background(Color.appBackground)
         }
+    }
+
+    private var remainingProtein: Double {
+        max(0, target.proteinGrams - consumedProtein)
+    }
+
+    private var remainingWater: Double {
+        max(0, target.waterMl - consumedWaterMl)
     }
 
     private var nextActionCard: some View {
@@ -43,13 +54,19 @@ public struct DashboardView: View {
                     .foregroundColor(.secondary)
             }
 
-            Text("Faltam **28g de proteína** e **1.000 ml de água**.")
-                .font(.headline)
+            if remainingProtein > 0 || remainingWater > 0 {
+                Text("Faltam **\(Int(remainingProtein))g de proteína** e **\(Int(remainingWater)) ml de água**.")
+                    .font(.headline)
 
-            Text("💡 No jantar, priorize **150g de filé de frango** ou **3 ovos com queijo**, e beba 500ml de água na próxima hora.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                Text("💡 Priorize **150g de filé de frango** ou **3 ovos com whey**, e beba 500ml de água na próxima hora para manter o ritmo.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("🎉 Metas do dia batidas com sucesso!")
+                    .font(.headline)
+                    .foregroundColor(.green)
+            }
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -63,24 +80,42 @@ public struct DashboardView: View {
 
     private var macroSummarySection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Metas do Dia")
+            Text("Metas Diárias (\(target.source.rawValue))")
                 .font(.headline)
 
             HStack(spacing: 12) {
                 metricCard(
                     title: "Calorias",
                     current: "\(Int(consumedCalories))",
-                    target: "\(Int(targetCalories)) kcal",
-                    progress: consumedCalories / max(1, targetCalories),
+                    target: "\(Int(target.calories)) kcal",
+                    progress: consumedCalories / max(1, target.calories),
                     color: .orange
                 )
 
                 metricCard(
                     title: "Proteína",
                     current: "\(Int(consumedProtein))g",
-                    target: "\(Int(targetProtein))g",
-                    progress: consumedProtein / max(1, targetProtein),
+                    target: "\(Int(target.proteinGrams))g",
+                    progress: consumedProtein / max(1, target.proteinGrams),
                     color: .blue
+                )
+            }
+
+            HStack(spacing: 12) {
+                metricCard(
+                    title: "Carboidratos",
+                    current: "0g",
+                    target: "\(Int(target.carbsGrams))g",
+                    progress: 0,
+                    color: .green
+                )
+
+                metricCard(
+                    title: "Gorduras",
+                    current: "0g",
+                    target: "\(Int(target.fatGrams))g",
+                    progress: 0,
+                    color: .purple
                 )
             }
         }
@@ -92,12 +127,12 @@ public struct DashboardView: View {
                 Text("Hidratação")
                     .font(.headline)
                 Spacer()
-                Text("\(Int(consumedWaterMl)) / \(Int(targetWaterMl)) ml")
+                Text("\(Int(consumedWaterMl)) / \(Int(target.waterMl)) ml")
                     .font(.subheadline.bold())
                     .foregroundColor(.cyan)
             }
 
-            ProgressView(value: min(1.0, consumedWaterMl / max(1, targetWaterMl)))
+            ProgressView(value: min(1.0, consumedWaterMl / max(1, target.waterMl)))
                 .tint(.cyan)
 
             HStack {

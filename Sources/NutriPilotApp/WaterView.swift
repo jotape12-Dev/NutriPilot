@@ -2,11 +2,13 @@ import SwiftUI
 import NutriPilotCore
 
 public struct WaterView: View {
-    @State private var totalWaterMl: Double = 1800
-    @State private var targetWaterMl: Double = 3200
+    public var targetWaterMl: Double
+    @State private var totalWaterMl: Double = 0
     @State private var logs: [WaterLog] = []
 
-    public init() {}
+    public init(targetWaterMl: Double = 3000) {
+        self.targetWaterMl = targetWaterMl
+    }
 
     public var body: some View {
         NavigationStack {
