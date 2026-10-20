@@ -42,6 +42,18 @@ public struct SkinfoldMeasurements: Codable, Sendable, Equatable {
         }
         return c + a + m + s + si + t + tr
     }
+
+    /// Soma de 3 dobras para homens (Jackson & Pollock: Peitoral + Abdominal + Coxa)
+    public var sumOf3FoldsMale: Double? {
+        guard let c = chestMm, let a = abdominalMm, let t = thighMm else { return nil }
+        return c + a + t
+    }
+
+    /// Soma de 3 dobras para mulheres (Jackson & Pollock: Tríceps + Suprailíaca + Coxa)
+    public var sumOf3FoldsFemale: Double? {
+        guard let tr = tricepsMm, let si = suprailiacMm, let t = thighMm else { return nil }
+        return tr + si + t
+    }
 }
 
 public struct BodyMeasurement: Identifiable, Codable, Sendable, Equatable {
@@ -68,6 +80,8 @@ public struct BodyMeasurement: Identifiable, Codable, Sendable, Equatable {
 
     // Composição Corporal (Calculada / BIA / DEXA)
     public var bodyFatPercent: Double?
+    public var waterPercent: Double?          // % de Água Corporal (BIA)
+    public var visceralFatLevel: Int?          // Nível de Gordura Visceral (BIA 1-59)
     public var leanMassKg: Double?
     public var fatMassKg: Double?
     public var muscularMassKg: Double?
@@ -100,6 +114,8 @@ public struct BodyMeasurement: Identifiable, Codable, Sendable, Equatable {
         leftCalfCm: Double? = nil,
         rightCalfCm: Double? = nil,
         bodyFatPercent: Double? = nil,
+        waterPercent: Double? = nil,
+        visceralFatLevel: Int? = nil,
         leanMassKg: Double? = nil,
         fatMassKg: Double? = nil,
         muscularMassKg: Double? = nil,
@@ -128,6 +144,8 @@ public struct BodyMeasurement: Identifiable, Codable, Sendable, Equatable {
         self.leftCalfCm = leftCalfCm
         self.rightCalfCm = rightCalfCm
         self.bodyFatPercent = bodyFatPercent
+        self.waterPercent = waterPercent
+        self.visceralFatLevel = visceralFatLevel
         self.leanMassKg = leanMassKg
         self.fatMassKg = fatMassKg
         self.muscularMassKg = muscularMassKg
