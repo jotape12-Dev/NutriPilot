@@ -29,10 +29,10 @@
 
 ---
 
-## Fase 3 — Parsing Inteligente de Refeições
-- [ ] **T-015:** Contrato e parser de linguagem natural para refeições (texto/áudio).
-- [ ] **T-016:** Tela de confirmação em 1 toque antes de persistir o alimento parseado.
-- [ ] **T-017:** Suíte de testes de parsing com frases típicas brasileiras.
+## Fase 3 — Parsing Inteligente de Refeições [CONCLUÍDO]
+- [x] **T-015:** Contrato e parser de linguagem natural para refeições (texto/áudio) (`MealParserEngine`).
+- [x] **T-016:** Tela de confirmação em 1 toque antes de persistir o alimento parseado (`MealParserConfirmationSheet`).
+- [x] **T-017:** Suíte de testes de parsing com frases típicas brasileiras (`MealParserEngineTests`).
 
 ---
 
