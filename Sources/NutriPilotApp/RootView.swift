@@ -50,7 +50,12 @@ public struct RootView: View {
                     }
                     .tag(AppTab.body)
 
-                    MealPlanView(targetCalories: target.calories)
+                    MealPlanView(
+                        targetCalories: target.calories,
+                        mealStore: mealStore,
+                        waterStore: waterStore,
+                        profileStore: store
+                    )
                         .tabItem {
                             Label("Plano", systemImage: "list.clipboard.fill")
                         }
