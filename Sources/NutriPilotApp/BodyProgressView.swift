@@ -75,26 +75,16 @@ public struct BodyProgressView: View {
         return Array(allPoints.suffix(min(count, allPoints.count)))
     }
 
-    // Última medição com circunferências
-    private var latestCircumferenceMeasurement: BodyMeasurement? {
-        bodyStore.sortedMeasurements.reversed().first(where: { $0.waistCm != nil || $0.abdomenCm != nil || $0.hipCm != nil })
+    // Histórico de medições com circunferências (mais recente primeiro)
+    private var circumferenceLogs: [BodyMeasurement] {
+        bodyStore.sortedMeasurements.filter {
+            $0.waistCm != nil || $0.abdomenCm != nil || $0.hipCm != nil || $0.chestCm != nil || $0.rightArmRelaxedCm != nil || $0.rightThighCm != nil
+        }.reversed()
     }
 
     // Última medição com composição corporal
     private var latestCompositionMeasurement: BodyMeasurement? {
         bodyStore.sortedMeasurements.reversed().first(where: { $0.bodyFatPercent != nil })
-    }
-
-    private var currentBodyFatPercent: Double {
-        latestCompositionMeasurement?.bodyFatPercent ?? 15.8
-    }
-
-    private var currentFatMassKg: Double {
-        latestCompositionMeasurement?.fatMassKg ?? (latestWeight * (currentBodyFatPercent / 100.0)).rounded(to: 1)
-    }
-
-    private var currentLeanMassKg: Double {
-        latestCompositionMeasurement?.leanMassKg ?? (latestWeight - currentFatMassKg).rounded(to: 1)
     }
 
     public var body: some View {
@@ -394,15 +384,7 @@ public struct BodyProgressView: View {
     // MARK: - 4. Seção Modular de Circunferências
 
     private var circumferencesSection: some View {
-        let m = latestCircumferenceMeasurement
-        let waist = m?.waistCm ?? 81.0
-        let abdomen = m?.abdomenCm ?? 86.5
-        let hip = m?.hipCm ?? 99.0
-        let arm = m?.rightArmRelaxedCm ?? 37.5
-        let chest = m?.chestCm ?? 103.0
-        let thigh = m?.rightThighCm ?? 58.0
-
-        return VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("Circunferências Corporais")
                     .font(.headline)
@@ -415,13 +397,22 @@ public struct BodyProgressView: View {
                 .foregroundColor(.green)
             }
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                circumferenceBadge(name: "Cintura", value: String(format: "%.1f cm", waist), delta: "-1.5 cm")
-                circumferenceBadge(name: "Abdômen", value: String(format: "%.1f cm", abdomen), delta: "-2.0 cm")
-                circumferenceBadge(name: "Quadril", value: String(format: "%.1f cm", hip), delta: "-0.5 cm")
-                circumferenceBadge(name: "Braço Dir.", value: String(format: "%.1f cm", arm), delta: "+0.3 cm")
-                circumferenceBadge(name: "Tórax", value: String(format: "%.1f cm", chest), delta: "+0.5 cm")
-                circumferenceBadge(name: "Coxa Dir.", value: String(format: "%.1f cm", thigh), delta: "-0.2 cm")
+            if circumferenceLogs.isEmpty {
+                circumferencesEmptyState
+            } else {
+                let latest = circumferenceLogs[0]
+                let previous = circumferenceLogs.dropFirst().first
+                let items = buildCircumferenceItems(latest: latest, previous: previous)
+
+                if items.isEmpty {
+                    circumferencesEmptyState
+                } else {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        ForEach(items) { item in
+                            circumferenceBadge(name: item.name, value: item.valueString, delta: item.deltaString)
+                        }
+                    }
+                }
             }
         }
         .padding(16)
@@ -430,16 +421,86 @@ public struct BodyProgressView: View {
         .shadow(color: Color.black.opacity(0.03), radius: 3, y: 1)
     }
 
-    private func circumferenceBadge(name: String, value: String, delta: String) -> some View {
+    private var circumferencesEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "ruler")
+                .font(.system(size: 38))
+                .foregroundColor(.secondary.opacity(0.8))
+                .padding(.top, 4)
+
+            Text("Nenhuma circunferência registrada")
+                .font(.subheadline.bold())
+                .foregroundColor(.primary)
+
+            Text("Acompanhar circunferências (cintura, abdômen e quadril) é a melhor forma de visualizar a queima de gordura e ganho muscular, especialmente em períodos em que o peso na balança parece não mudar. Recomendamos tirar suas medidas com uma fita métrica e registrá-las periodicamente a cada 15 ou 30 dias.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(2)
+
+            Button {
+                isShowingCircumferenceSheet = true
+                hapticTrigger += 1
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Lançar Primeiras Medidas")
+                }
+                .font(.footnote.bold())
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
+                .background(Color.green)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(Color.appBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func buildCircumferenceItems(latest: BodyMeasurement, previous: BodyMeasurement?) -> [CircumferenceItem] {
+        var items: [CircumferenceItem] = []
+        if let waist = latest.waistCm {
+            items.append(CircumferenceItem(name: "Cintura", value: waist, previousValue: previous?.waistCm))
+        }
+        if let abdomen = latest.abdomenCm {
+            items.append(CircumferenceItem(name: "Abdômen", value: abdomen, previousValue: previous?.abdomenCm))
+        }
+        if let hip = latest.hipCm {
+            items.append(CircumferenceItem(name: "Quadril", value: hip, previousValue: previous?.hipCm))
+        }
+        if let arm = latest.rightArmRelaxedCm {
+            items.append(CircumferenceItem(name: "Braço Dir.", value: arm, previousValue: previous?.rightArmRelaxedCm))
+        }
+        if let chest = latest.chestCm {
+            items.append(CircumferenceItem(name: "Tórax", value: chest, previousValue: previous?.chestCm))
+        }
+        if let thigh = latest.rightThighCm {
+            items.append(CircumferenceItem(name: "Coxa Dir.", value: thigh, previousValue: previous?.rightThighCm))
+        }
+        return items
+    }
+
+    private func circumferenceBadge(name: String, value: String, delta: String?) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(name)
                 .font(.caption2)
                 .foregroundColor(.secondary)
             Text(value)
                 .font(.subheadline.bold())
-            Text(delta)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(delta.hasPrefix("-") ? .green : .blue)
+            if let delta {
+                Text(delta)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(delta.hasPrefix("-") ? .green : (delta == "0.0 cm" ? .secondary : .blue))
+            } else {
+                Text("1º registro")
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundColor(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
@@ -450,9 +511,7 @@ public struct BodyProgressView: View {
     // MARK: - 5. Avaliação Antropométrica (Pollock / BIA)
 
     private var antropometrySection: some View {
-        let leanPercent = max(0, 100.0 - currentBodyFatPercent)
-
-        return VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("Composição Antropométrica")
                     .font(.headline)
@@ -465,59 +524,108 @@ public struct BodyProgressView: View {
                 .foregroundColor(.green)
             }
 
-            // Alternância de Protocolos (Pollock 3/7 / Bioimpedância)
-            Picker("Protocolo", selection: $selectedAntropometryProtocol) {
-                ForEach(AntropometryProtocol.allCases, id: \.self) { proto in
-                    Text(proto.rawValue).tag(proto)
-                }
-            }
-            .pickerStyle(.segmented)
+            if let comp = latestCompositionMeasurement, let bf = comp.bodyFatPercent {
+                let leanPercent = max(0, 100.0 - bf)
+                let fatMass = comp.fatMassKg ?? (latestWeight * (bf / 100.0)).rounded(to: 1)
+                let leanMass = comp.leanMassKg ?? max(0, latestWeight - fatMass).rounded(to: 1)
 
-            // Barra Visual de Fracionamento (Massa Magra vs Massa Gorda)
-            VStack(spacing: 6) {
-                GeometryReader { proxy in
-                    HStack(spacing: 2) {
-                        Rectangle()
-                            .fill(Color.green)
-                            .frame(width: max(0, proxy.size.width * (leanPercent / 100.0)))
-                        Rectangle()
-                            .fill(Color.purple)
-                            .frame(width: max(0, proxy.size.width * (currentBodyFatPercent / 100.0)))
+                // Alternância de Protocolos (Pollock 3/7 / Bioimpedância)
+                Picker("Protocolo", selection: $selectedAntropometryProtocol) {
+                    ForEach(AntropometryProtocol.allCases, id: \.self) { proto in
+                        Text(proto.rawValue).tag(proto)
                     }
-                    .clipShape(Capsule())
                 }
-                .frame(height: 14)
+                .pickerStyle(.segmented)
 
-                HStack {
-                    Text(String(format: "Massa Magra: %.1f kg (%.1f%%)", currentLeanMassKg, leanPercent))
-                        .font(.caption2.bold())
-                        .foregroundColor(.green)
-                    Spacer()
-                    Text(String(format: "Massa Gorda: %.1f kg (%.1f%%)", currentFatMassKg, currentBodyFatPercent))
-                        .font(.caption2.bold())
-                        .foregroundColor(.purple)
+                // Barra Visual de Fracionamento (Massa Magra vs Massa Gorda)
+                VStack(spacing: 6) {
+                    GeometryReader { proxy in
+                        HStack(spacing: 2) {
+                            Rectangle()
+                                .fill(Color.green)
+                                .frame(width: max(0, proxy.size.width * (leanPercent / 100.0)))
+                            Rectangle()
+                                .fill(Color.purple)
+                                .frame(width: max(0, proxy.size.width * (bf / 100.0)))
+                        }
+                        .clipShape(Capsule())
+                    }
+                    .frame(height: 14)
+
+                    HStack {
+                        Text(String(format: "Massa Magra: %.1f kg (%.1f%%)", leanMass, leanPercent))
+                            .font(.caption2.bold())
+                            .foregroundColor(.green)
+                        Spacer()
+                        Text(String(format: "Massa Gorda: %.1f kg (%.1f%%)", fatMass, bf))
+                            .font(.caption2.bold())
+                            .foregroundColor(.purple)
+                    }
                 }
-            }
 
-            HStack(spacing: 12) {
-                compositionCard(
-                    title: "Gordura Corporal",
-                    value: String(format: "%.1f%%", currentBodyFatPercent),
-                    subtitle: String(format: "%.1f kg de gordura", currentFatMassKg),
-                    color: .purple
-                )
-                compositionCard(
-                    title: "Massa Magra Livre",
-                    value: String(format: "%.1f%%", leanPercent),
-                    subtitle: String(format: "%.1f kg massa magra", currentLeanMassKg),
-                    color: .green
-                )
+                HStack(spacing: 12) {
+                    compositionCard(
+                        title: "Gordura Corporal",
+                        value: String(format: "%.1f%%", bf),
+                        subtitle: String(format: "%.1f kg de gordura", fatMass),
+                        color: .purple
+                    )
+                    compositionCard(
+                        title: "Massa Magra Livre",
+                        value: String(format: "%.1f%%", leanPercent),
+                        subtitle: String(format: "%.1f kg massa magra", leanMass),
+                        color: .green
+                    )
+                }
+            } else {
+                compositionEmptyState
             }
         }
         .padding(16)
         .background(Color.appCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 18))
         .shadow(color: Color.black.opacity(0.03), radius: 3, y: 1)
+    }
+
+    private var compositionEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "waveform.path.ecg.rectangle")
+                .font(.system(size: 38))
+                .foregroundColor(.secondary.opacity(0.8))
+                .padding(.top, 4)
+
+            Text("Sem avaliação de composição corporal")
+                .font(.subheadline.bold())
+                .foregroundColor(.primary)
+
+            Text("Você ainda não registrou uma bioimpedância ou avaliação por dobras cutâneas (Jackson & Pollock). Adicione suas dobras ou importe seu laudo para acompanhar a evolução da sua massa magra e percentual de gordura ao longo do tempo.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(2)
+
+            Button {
+                isShowingSkinfoldSheet = true
+                hapticTrigger += 1
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Lançar Dobras Cutâneas")
+                }
+                .font(.footnote.bold())
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
+                .background(Color.green)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(Color.appBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     private func compositionCard(title: String, value: String, subtitle: String, color: Color) -> some View {
@@ -547,6 +655,32 @@ public struct BodyProgressView: View {
 }
 
 // MARK: - Modelos Auxiliares
+
+public struct CircumferenceItem: Identifiable, Sendable {
+    public let id = UUID()
+    public let name: String
+    public let value: Double
+    public let previousValue: Double?
+
+    public init(name: String, value: Double, previousValue: Double?) {
+        self.name = name
+        self.value = value
+        self.previousValue = previousValue
+    }
+
+    public var valueString: String {
+        String(format: "%.1f cm", value)
+    }
+
+    public var deltaString: String? {
+        guard let previousValue else { return nil }
+        let diff = value - previousValue
+        if abs(diff) < 0.05 {
+            return "0.0 cm"
+        }
+        return String(format: "%+.1f cm", diff)
+    }
+}
 
 public enum TrendTimeWindow: String, CaseIterable, Sendable {
     case week = "7D"
@@ -653,25 +787,31 @@ private struct CircumferenceEntrySheet: View {
     let initialWeight: Double
     let onSave: (BodyMeasurement) -> Void
 
-    @State private var waist: String = "81.0"
-    @State private var abdomen: String = "86.5"
-    @State private var hip: String = "99.0"
-    @State private var arm: String = "37.5"
-    @State private var chest: String = "103.0"
-    @State private var thigh: String = "58.0"
+    @State private var waist: String = ""
+    @State private var abdomen: String = ""
+    @State private var hip: String = ""
+    @State private var arm: String = ""
+    @State private var chest: String = ""
+    @State private var thigh: String = ""
+
+    private func parseDouble(_ text: String) -> Double? {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: ".")
+        guard !clean.isEmpty else { return nil }
+        return Double(clean)
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Tronco (cm)") {
-                    TextField("Cintura", text: $waist)
-                    TextField("Abdômen", text: $abdomen)
-                    TextField("Quadril", text: $hip)
-                    TextField("Tórax", text: $chest)
+                    TextField("Cintura (ex: 81.0)", text: $waist)
+                    TextField("Abdômen (ex: 86.5)", text: $abdomen)
+                    TextField("Quadril (ex: 99.0)", text: $hip)
+                    TextField("Tórax (ex: 103.0)", text: $chest)
                 }
                 Section("Membros (cm)") {
-                    TextField("Braço relaxado", text: $arm)
-                    TextField("Coxa média", text: $thigh)
+                    TextField("Braço relaxado (ex: 37.5)", text: $arm)
+                    TextField("Coxa média (ex: 58.0)", text: $thigh)
                 }
             }
             .navigationTitle("Circunferências")
@@ -681,15 +821,27 @@ private struct CircumferenceEntrySheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Salvar") {
+                        let waistVal = parseDouble(waist)
+                        let abdomenVal = parseDouble(abdomen)
+                        let hipVal = parseDouble(hip)
+                        let chestVal = parseDouble(chest)
+                        let armVal = parseDouble(arm)
+                        let thighVal = parseDouble(thigh)
+
+                        guard waistVal != nil || abdomenVal != nil || hipVal != nil || chestVal != nil || armVal != nil || thighVal != nil else {
+                            dismiss()
+                            return
+                        }
+
                         let measurement = BodyMeasurement(
                             measuredAt: Date(),
                             weightKg: initialWeight,
-                            waistCm: Double(waist.replacingOccurrences(of: ",", with: ".")),
-                            hipCm: Double(hip.replacingOccurrences(of: ",", with: ".")),
-                            chestCm: Double(chest.replacingOccurrences(of: ",", with: ".")),
-                            abdomenCm: Double(abdomen.replacingOccurrences(of: ",", with: ".")),
-                            rightArmRelaxedCm: Double(arm.replacingOccurrences(of: ",", with: ".")),
-                            rightThighCm: Double(thigh.replacingOccurrences(of: ",", with: ".")),
+                            waistCm: waistVal,
+                            hipCm: hipVal,
+                            chestCm: chestVal,
+                            abdomenCm: abdomenVal,
+                            rightArmRelaxedCm: armVal,
+                            rightThighCm: thighVal,
                             source: .clinicalAssessment
                         )
                         onSave(measurement)
@@ -708,41 +860,47 @@ private struct SkinfoldsEntrySheet: View {
     let profile: UserProfile?
     let onSave: (BodyMeasurement) -> Void
 
-    @State private var chest: String = "10"
-    @State private var triceps: String = "12"
-    @State private var subscapular: String = "14"
-    @State private var suprailiac: String = "11"
-    @State private var abdomen: String = "16"
-    @State private var thigh: String = "13"
-    @State private var axillary: String = "9"
-    @State private var biaFatPercent: String = "16.5"
+    @State private var chest: String = ""
+    @State private var triceps: String = ""
+    @State private var subscapular: String = ""
+    @State private var suprailiac: String = ""
+    @State private var abdomen: String = ""
+    @State private var thigh: String = ""
+    @State private var axillary: String = ""
+    @State private var biaFatPercent: String = ""
+
+    private func parseDouble(_ text: String) -> Double? {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: ".")
+        guard !clean.isEmpty else { return nil }
+        return Double(clean)
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 if selectedProtocol == .bia {
                     Section("Bioimpedância (BIA)") {
-                        TextField("Gordura Corporal (%)", text: $biaFatPercent)
+                        TextField("Gordura Corporal (%) ex: 15.5", text: $biaFatPercent)
                     }
                 } else {
                     Section("Dobras Cutâneas (mm)") {
                         if selectedProtocol == .pollock7 || profile?.sex == .male {
-                            TextField("Peitoral", text: $chest)
+                            TextField("Peitoral (ex: 10)", text: $chest)
                         }
                         if selectedProtocol == .pollock7 || profile?.sex == .female {
-                            TextField("Tríceps", text: $triceps)
+                            TextField("Tríceps (ex: 12)", text: $triceps)
                         }
                         if selectedProtocol == .pollock7 {
-                            TextField("Subescapular", text: $subscapular)
-                            TextField("Axilar Média", text: $axillary)
+                            TextField("Subescapular (ex: 14)", text: $subscapular)
+                            TextField("Axilar Média (ex: 9)", text: $axillary)
                         }
                         if selectedProtocol == .pollock7 || profile?.sex == .female {
-                            TextField("Suprailíaca", text: $suprailiac)
+                            TextField("Suprailíaca (ex: 11)", text: $suprailiac)
                         }
                         if selectedProtocol == .pollock7 || profile?.sex == .male {
-                            TextField("Abdômen", text: $abdomen)
+                            TextField("Abdômen (ex: 16)", text: $abdomen)
                         }
-                        TextField("Coxa", text: $thigh)
+                        TextField("Coxa (ex: 13)", text: $thigh)
                     }
                 }
             }
@@ -765,9 +923,12 @@ private struct SkinfoldsEntrySheet: View {
         let age = Double(profile?.age ?? 30)
 
         if selectedProtocol == .bia {
-            let fat = Double(biaFatPercent.replacingOccurrences(of: ",", with: ".")) ?? 16.0
+            guard let fat = parseDouble(biaFatPercent) else {
+                dismiss()
+                return
+            }
             let fatKg = (initialWeight * (fat / 100.0)).rounded(to: 2)
-            let leanKg = (initialWeight - fatKg).rounded(to: 2)
+            let leanKg = max(0.0, initialWeight - fatKg).rounded(to: 2)
 
             let measurement = BodyMeasurement(
                 measuredAt: Date(),
@@ -781,13 +942,13 @@ private struct SkinfoldsEntrySheet: View {
             dismiss()
         } else {
             let skinfolds = SkinfoldMeasurements(
-                chestMm: Double(chest.replacingOccurrences(of: ",", with: ".")),
-                abdominalMm: Double(abdomen.replacingOccurrences(of: ",", with: ".")),
-                middleAxillaryMm: Double(axillary.replacingOccurrences(of: ",", with: ".")),
-                subscapularMm: Double(subscapular.replacingOccurrences(of: ",", with: ".")),
-                suprailiacMm: Double(suprailiac.replacingOccurrences(of: ",", with: ".")),
-                thighMm: Double(thigh.replacingOccurrences(of: ",", with: ".")),
-                tricepsMm: Double(triceps.replacingOccurrences(of: ",", with: "."))
+                chestMm: parseDouble(chest),
+                abdominalMm: parseDouble(abdomen),
+                middleAxillaryMm: parseDouble(axillary),
+                subscapularMm: parseDouble(subscapular),
+                suprailiacMm: parseDouble(suprailiac),
+                thighMm: parseDouble(thigh),
+                tricepsMm: parseDouble(triceps)
             )
 
             let result: BodyCompositionResult?

@@ -51,23 +51,19 @@ public struct OnboardingView: View {
                     }
                     .onChange(of: sex) { _, _ in recalculate() }
 
-                    HStack {
-                        Text("Altura")
-                        Spacer()
-                        Text("\(Int(heightCm)) cm")
-                            .foregroundColor(.secondary)
+                    Picker("Altura", selection: $heightCm) {
+                        ForEach(140...220, id: \.self) { cm in
+                            Text("\(cm) cm").tag(Double(cm))
+                        }
                     }
-                    Slider(value: $heightCm, in: 140...210, step: 1)
-                        .onChange(of: heightCm) { _, _ in recalculate() }
+                    .onChange(of: heightCm) { _, _ in recalculate() }
 
-                    HStack {
-                        Text("Peso Atual")
-                        Spacer()
-                        Text(String(format: "%.1f kg", weightKg))
-                            .foregroundColor(.secondary)
+                    Picker("Peso Atual", selection: $weightKg) {
+                        ForEach(Array(stride(from: 40.0, through: 160.0, by: 0.5)), id: \.self) { kg in
+                            Text(String(format: "%.1f kg", kg)).tag(kg)
+                        }
                     }
-                    Slider(value: $weightKg, in: 40...150, step: 0.5)
-                        .onChange(of: weightKg) { _, _ in recalculate() }
+                    .onChange(of: weightKg) { _, _ in recalculate() }
                 }
 
                 // 3. Métricas de Bioimpedância (se extraídas pelo PDF ou inseridas)
@@ -184,49 +180,25 @@ public struct OnboardingView: View {
 
     private var bioimpedanceSection: some View {
         Section("Métricas de Bioimpedância (Editáveis)") {
-            if let bf = bodyFatPercentage {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("% de Gordura Corporal")
-                        Spacer()
-                        Text(String(format: "%.1f%%", bf))
-                            .foregroundColor(.orange)
-                            .font(.subheadline.bold())
+            if bodyFatPercentage != nil {
+                Picker("% de Gordura Corporal", selection: Binding(
+                    get: { (bodyFatPercentage ?? 15.0).rounded(to: 1) },
+                    set: { bodyFatPercentage = $0; recalculate() }
+                )) {
+                    ForEach(Array(stride(from: 5.0, through: 50.0, by: 0.1)), id: \.self) { val in
+                        Text(String(format: "%.1f%%", val)).tag(Double(String(format: "%.1f", val))!)
                     }
-                    Slider(
-                        value: Binding(
-                            get: { bodyFatPercentage ?? 15.0 },
-                            set: {
-                                bodyFatPercentage = $0
-                                recalculate()
-                            }
-                        ),
-                        in: 3...55,
-                        step: 0.1
-                    )
                 }
             }
 
-            if let lm = leanMassKg {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("Massa Magra Livre")
-                        Spacer()
-                        Text(String(format: "%.1f kg", lm))
-                            .foregroundColor(.green)
-                            .font(.subheadline.bold())
+            if leanMassKg != nil {
+                Picker("Massa Magra Livre", selection: Binding(
+                    get: { (leanMassKg ?? 50.0).rounded(to: 1) },
+                    set: { leanMassKg = $0; recalculate() }
+                )) {
+                    ForEach(Array(stride(from: 25.0, through: 110.0, by: 0.5)), id: \.self) { val in
+                        Text(String(format: "%.1f kg", val)).tag(val)
                     }
-                    Slider(
-                        value: Binding(
-                            get: { leanMassKg ?? 50.0 },
-                            set: {
-                                leanMassKg = $0
-                                recalculate()
-                            }
-                        ),
-                        in: 20...120,
-                        step: 0.1
-                    )
                 }
             }
 
@@ -244,26 +216,14 @@ public struct OnboardingView: View {
                 )
             }
 
-            if let bw = bodyWaterPercent {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("Água Corporal")
-                        Spacer()
-                        Text(String(format: "%.1f%%", bw))
-                            .foregroundColor(.cyan)
-                            .font(.subheadline.bold())
+            if bodyWaterPercent != nil {
+                Picker("Água Corporal", selection: Binding(
+                    get: { (bodyWaterPercent ?? 55.0).rounded(to: 1) },
+                    set: { bodyWaterPercent = $0; recalculate() }
+                )) {
+                    ForEach(Array(stride(from: 35.0, through: 75.0, by: 0.5)), id: \.self) { val in
+                        Text(String(format: "%.1f%%", val)).tag(val)
                     }
-                    Slider(
-                        value: Binding(
-                            get: { bodyWaterPercent ?? 55.0 },
-                            set: {
-                                bodyWaterPercent = $0
-                                recalculate()
-                            }
-                        ),
-                        in: 30...80,
-                        step: 0.5
-                    )
                 }
             }
         }
