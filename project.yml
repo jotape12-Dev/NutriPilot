@@ -17,6 +17,9 @@ targets:
       - App
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.jotape.NutriPilot
+      DEVELOPMENT_TEAM: 6F2KGULZ85
+      CODE_SIGN_STYLE: Automatic
+      CODE_SIGN_IDENTITY: "Apple Development"
       INFOPLIST_KEY_UILaunchScreen_Generation: YES
       INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
       INFOPLIST_KEY_NSMicrophoneUsageDescription: "O NutriPilot utiliza o microfone para transcrição rápida por voz das suas refeições."

@@ -254,6 +254,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					08D7FDEEC66943011CE1AAF6 = {
+						DevelopmentTeam = 6F2KGULZ85;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -450,8 +451,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6F2KGULZ85;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "O NutriPilot utiliza o microfone para transcrição rápida por voz das suas refeições.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "O NutriPilot analisa o áudio para identificar alimentos e porções da TBCA.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -470,8 +472,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6F2KGULZ85;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "O NutriPilot utiliza o microfone para transcrição rápida por voz das suas refeições.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "O NutriPilot analisa o áudio para identificar alimentos e porções da TBCA.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
