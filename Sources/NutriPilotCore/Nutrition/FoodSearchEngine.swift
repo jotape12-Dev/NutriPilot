@@ -67,6 +67,11 @@ public final class FoodSearchEngine: Sendable {
 
         guard !queryTokens.isEmpty else { return [] }
 
+        let cleanQueryStem = queryTokens.map { Self.stemPT($0) }.joined(separator: " ")
+        let queryHasOvo = queryTokens.contains(where: { Self.stemPT($0) == "ovo" })
+        let queryHasClara = queryTokens.contains(where: { Self.stemPT($0) == "clara" })
+        let queryHasInteiro = queryTokens.contains(where: { Self.stemPT($0) == "inteiro" })
+
         var scoredItems: [(item: FoodItem, score: Int)] = []
 
         for item in database {
@@ -76,19 +81,19 @@ public final class FoodSearchEngine: Sendable {
             var score = 0
 
             // 1. Correspondência exata no nome completo
-            if normalizedName == cleanQuery {
+            if normalizedName == cleanQuery || normalizedName == cleanQueryStem {
                 score += 1000
             }
-            // 2. Prefixo exato no início do nome
-            else if normalizedName.hasPrefix(cleanQuery) {
+            // 2. Prefixo exato no início do nome (incluindo radical/stem)
+            else if normalizedName.hasPrefix(cleanQuery) || normalizedName.hasPrefix(cleanQueryStem) {
                 score += 600
                 // Bônus se for palavra isolada logo no início (ex: "pao " em "pao frances")
-                if normalizedName.hasPrefix(cleanQuery + " ") {
+                if normalizedName.hasPrefix(cleanQuery + " ") || normalizedName.hasPrefix(cleanQueryStem + " ") {
                     score += 150
                 }
             }
             // 3. Contém o termo exato da busca
-            else if normalizedName.contains(cleanQuery) {
+            else if normalizedName.contains(cleanQuery) || normalizedName.contains(cleanQueryStem) {
                 score += 400
             }
 
@@ -97,7 +102,7 @@ public final class FoodSearchEngine: Sendable {
                 score += max(0, 40 - item.name.count)
             }
 
-            // 4. Correspondência de tokens individuais com suporte a singular/plural (ex: "ovos" -> "ovo")
+            // 5. Correspondência de tokens individuais com suporte a singular/plural (ex: "ovos" -> "ovo")
             let nameTokens = normalizedName
                 .components(separatedBy: CharacterSet.whitespacesAndNewlines)
                 .filter { !$0.isEmpty }
@@ -118,6 +123,17 @@ public final class FoodSearchEngine: Sendable {
                 score += 200 + (matchedTokens * 20)
             } else if matchedTokens > 0 {
                 score += (matchedTokens * 30)
+            }
+
+            // 6. Desempate semântico crítico (Ex: Ovos inteiros vs Clara de ovo)
+            if queryHasOvo && !queryHasClara && normalizedName.contains("clara de ovo") {
+                score -= 400 // Se buscou ovo e não pediu clara, priorize ovo inteiro!
+            }
+            if queryHasInteiro && normalizedName.contains("clara de ovo") {
+                score -= 600
+            }
+            if queryHasClara && normalizedName.contains("clara de ovo") {
+                score += 400 // Se pediu clara explicitamente, priorize clara!
             }
 
             if score > 0 {

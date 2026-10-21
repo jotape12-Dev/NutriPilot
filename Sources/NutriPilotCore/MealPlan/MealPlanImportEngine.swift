@@ -109,16 +109,30 @@ public enum MealPlanImportEngine {
         let content: String
     }
 
+    private struct DetectedHeader {
+        let mealType: MealType
+        let name: String
+        let suggestedTime: String
+        let inlineContent: String?
+    }
+
     private static func splitIntoMealSections(text: String) -> [RawMealSection] {
         let lines = text.components(separatedBy: .newlines)
-        var sections: [(mealType: MealType, name: String, suggestedTime: String, startIndex: Int)] = []
+        var sections: [(mealType: MealType, name: String, suggestedTime: String, startIndex: Int, inlineContent: String?)] = []
+        var terminationIndex: Int? = nil
 
         for (index, line) in lines.enumerated() {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { continue }
 
+            // Se já encontramos ao menos 1 refeição e chegamos a seções de encerramento / tabelas / preparo semanal, encerra!
+            if !sections.isEmpty && isMealListTerminationLine(trimmed) {
+                terminationIndex = index
+                break
+            }
+
             if let detected = detectMealHeader(line: trimmed) {
-                sections.append((detected.mealType, detected.name, detected.suggestedTime, index))
+                sections.append((detected.mealType, detected.name, detected.suggestedTime, index, detected.inlineContent))
             }
         }
 
@@ -128,9 +142,16 @@ public enum MealPlanImportEngine {
 
         for i in 0..<sections.count {
             let current = sections[i]
-            let nextIndex = (i + 1 < sections.count) ? sections[i + 1].startIndex : lines.count
+            let nextIndex = (i + 1 < sections.count) ? sections[i + 1].startIndex : (terminationIndex ?? lines.count)
 
-            let contentLines = lines[(current.startIndex + 1)..<nextIndex]
+            var contentLines: [String] = []
+            if let inline = current.inlineContent, !inline.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                contentLines.append(inline)
+            }
+            if current.startIndex + 1 < nextIndex {
+                contentLines.append(contentsOf: lines[(current.startIndex + 1)..<nextIndex])
+            }
+
             let contentText = contentLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
 
             result.append(
@@ -146,77 +167,183 @@ public enum MealPlanImportEngine {
         return result
     }
 
-    private static func detectMealHeader(line: String) -> (mealType: MealType, name: String, suggestedTime: String)? {
+    private static func isMealListTerminationLine(_ line: String) -> Bool {
         let lower = line.lowercased()
+        let patterns = [
+            #"calorias\s*e\s*macros"#,
+            #"macros\s*por\s*refeiç[aã]o"#,
+            #"resumo\s*nutricional"#,
+            #"tabela\s*nutricional"#,
+            #"totais\s*(?:da\s*dieta|nutricionais|desta\s*tabela)?"#,
+            #"preparo\s*das\s*(?:tr[eê]s\s*)?marmitas"#,
+            #"preparo\s*semanal"#,
+            #"para\s*\d+\s*dias"#,
+            #"acompanhamento\s*e\s*limites"#,
+            #"orientaç[oõ]es\s*gerais"#,
+            #"recomendaç[oõ]es"#,
+            #"observaç[oõ]es\s*finais"#,
+            #"material\s*educativo"#,
+            #"d[eé]ficit\s*estimado"#,
+            #"relaç[aã]o\s*com\s*o\s*peso"#,
+            #"prescriç[aã]o\s*v[aá]lida\s*at[eé]"#,
+            #"assinatura"#
+        ]
+        for pattern in patterns {
+            if matches(pattern: pattern, in: lower) {
+                return true
+            }
+        }
+        return false
+    }
 
-        // 1. Refeições Nominais Específicas (Prioridade Máxima sobre números genéricos)
-        if matches(pattern: #"(?:caf[eé]\s*da\s*manh[aã]|desjejum)"#, in: lower) {
-            let time = extractTime(from: line) ?? "07:30"
-            return (.breakfast, "Café da Manhã", time)
+    private static func detectMealHeader(line: String) -> DetectedHeader? {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = trimmed.lowercased()
+
+        let startsWithTime = matches(pattern: #"^\d{1,2}[:hH]\d{2}"#, in: trimmed)
+        let startsWithMealNum = matches(pattern: #"^(?:\d+[ªaºo]?\s*refeiç[aã]o|refeiç[aã]o\s*\d+)"#, in: lower)
+
+        // Linha longa sem prefixo de hora ou número de refeição provavelmente é prosa narrativa
+        if !startsWithTime && !startsWithMealNum && trimmed.count > 60 {
+            return nil
         }
 
-        if matches(pattern: #"\b(?:almoço|almoco)\b"#, in: lower) {
-            let time = extractTime(from: line) ?? "12:30"
-            return (.lunch, "Almoço", time)
+        // Linhas sem horário que terminam com ponto final '.' e não contêm alimentos inline (';' ou '+') são sentenças, não cabeçalhos
+        if !startsWithTime && !startsWithMealNum && trimmed.hasSuffix(".") && !trimmed.contains(";") && !trimmed.contains("+") && !trimmed.contains(":") {
+            return nil
         }
 
-        if matches(pattern: #"\b(?:jantar|janta)\b"#, in: lower) {
-            let time = extractTime(from: line) ?? "19:30"
-            return (.dinner, "Jantar", time)
+        // Caso 1: Começa com horário (Ex: "08h00 — Café da manhã 2 ovos inteiros...", "12:30 - Almoço")
+        if startsWithTime {
+            if let timeMatch = firstMatch(pattern: #"^(\d{1,2})[:hH](\d{2})\s*(?:[—–-]|:|\s)\s*(.*)$"#, in: trimmed) {
+                let hour = Int(timeMatch.0) ?? 0
+                let min = Int(timeMatch.1) ?? 0
+                let formattedTime = String(format: "%02d:%02d", hour, min)
+                let remainder = timeMatch.2.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                if let identified = identifyMealInText(remainder, fallbackTime: formattedTime) {
+                    return identified
+                }
+            }
         }
 
-        if matches(pattern: #"\b(?:ceia|snack\s*noturno)\b"#, in: lower) {
-            let time = extractTime(from: line) ?? "22:00"
-            return (.supper, "Ceia", time)
+        // Caso 2: Começa com número da refeição (Ex: "1ª Refeição - Café da Manhã (07:30)", "Refeição 2:")
+        if startsWithMealNum {
+            if let numMatch = firstMatch(pattern: #"^(?:(\d+)[ªaºo]?\s*refeiç[aã]o|refeiç[aã]o\s*(\d+))\b(?:\s*[-—–:]\s*|\s*)(.*)$"#, in: lower) {
+                let numStr = !numMatch.0.isEmpty ? numMatch.0 : numMatch.1
+                let mealNum = Int(numStr) ?? 1
+                let remainder = (trimmed as NSString).substring(from: (trimmed as NSString).length - (numMatch.2 as NSString).length)
+                let time = extractTime(from: trimmed) ?? defaultTimeForMealNumber(mealNum)
+
+                if let identified = identifyMealInText(remainder, fallbackTime: time) {
+                    return identified
+                } else {
+                    let defaultType = defaultMealTypeForNumber(mealNum)
+                    let defaultName = "\(mealNum)ª Refeição"
+                    return DetectedHeader(mealType: defaultType, name: defaultName, suggestedTime: time, inlineContent: remainder.isEmpty ? nil : remainder)
+                }
+            }
         }
 
-        if matches(pattern: #"(?:lanche\s*da\s*manh[aã]|colaç[aã]o)"#, in: lower) {
-            let time = extractTime(from: line) ?? "10:00"
-            return (.morningSnack, "Lanche da Manhã", time)
-        }
-
-        if matches(pattern: #"(?:lanche\s*da\s*tarde|pr[eé]-?treino|p[oó]s-?treino|merenda)"#, in: lower) {
-            let time = extractTime(from: line) ?? "16:00"
-            return (.afternoonSnack, "Lanche da Tarde", time)
-        }
-
-        if matches(pattern: #"\blanche\b"#, in: lower) {
-            let time = extractTime(from: line) ?? "16:00"
-            return (.afternoonSnack, "Lanche da Tarde", time)
-        }
-
-        // 2. Refeições Numeradas Genéricas (Caso o laudo use apenas '1ª Refeição', '2ª Refeição', etc.)
-        if matches(pattern: #"\b(?:1[ªaºo]?\s*refeiç[aã]o|refeiç[aã]o\s*1)\b"#, in: lower) {
-            let time = extractTime(from: line) ?? "07:30"
-            return (.breakfast, "Café da Manhã", time)
-        }
-
-        if matches(pattern: #"\b(?:2[ªaºo]?\s*refeiç[aã]o|refeiç[aã]o\s*2)\b"#, in: lower) {
-            let time = extractTime(from: line) ?? "10:00"
-            return (.morningSnack, "Lanche da Manhã", time)
-        }
-
-        if matches(pattern: #"\b(?:3[ªaºo]?\s*refeiç[aã]o|refeiç[aã]o\s*3)\b"#, in: lower) {
-            let time = extractTime(from: line) ?? "12:30"
-            return (.lunch, "Almoço", time)
-        }
-
-        if matches(pattern: #"\b(?:4[ªaºo]?\s*refeiç[aã]o|refeiç[aã]o\s*4)\b"#, in: lower) {
-            let time = extractTime(from: line) ?? "16:00"
-            return (.afternoonSnack, "Lanche da Tarde", time)
-        }
-
-        if matches(pattern: #"\b(?:5[ªaºo]?\s*refeiç[aã]o|refeiç[aã]o\s*5)\b"#, in: lower) {
-            let time = extractTime(from: line) ?? "19:30"
-            return (.dinner, "Jantar", time)
-        }
-
-        if matches(pattern: #"\b(?:6[ªaºo]?\s*refeiç[aã]o|refeiç[aã]o\s*6)\b"#, in: lower) {
-            let time = extractTime(from: line) ?? "22:00"
-            return (.supper, "Ceia", time)
+        // Caso 3: Começa diretamente pelo nome da refeição (Ex: "Café da manhã (08:00):", "Almoço:", "Jantar Igual ao almoço:")
+        let time = extractTime(from: trimmed) ?? "12:30"
+        if let identified = identifyMealInText(trimmed, fallbackTime: time) {
+            return identified
         }
 
         return nil
+    }
+
+    private static func identifyMealInText(_ text: String, fallbackTime: String) -> DetectedHeader? {
+        struct MealPattern {
+            let pattern: String
+            let mealType: MealType
+            let name: String
+            let defaultTime: String
+        }
+
+        let mealPatterns: [MealPattern] = [
+            MealPattern(pattern: #"\b(?:caf[eé]\s*da\s*manh[aã]|desjejum)\b"#, mealType: .breakfast, name: "Café da Manhã", defaultTime: "07:30"),
+            MealPattern(pattern: #"\b(?:almoço|almoco)\b"#, mealType: .lunch, name: "Almoço", defaultTime: "12:30"),
+            MealPattern(pattern: #"\b(?:jantar|janta)\b"#, mealType: .dinner, name: "Jantar", defaultTime: "19:30"),
+            MealPattern(pattern: #"\b(?:ceia|snack\s*noturno)\b"#, mealType: .supper, name: "Ceia", defaultTime: "22:00"),
+            MealPattern(pattern: #"\b(?:lanche\s*da\s*manh[aã]|colaç[aã]o)\b"#, mealType: .morningSnack, name: "Lanche da Manhã", defaultTime: "10:00"),
+            MealPattern(pattern: #"\b(?:antes\s*do\s*treino|pr[eé]-?treino)\b"#, mealType: .afternoonSnack, name: "Pré-Treino", defaultTime: "18:00"),
+            MealPattern(pattern: #"\bp[oó]s-?treino\b"#, mealType: .afternoonSnack, name: "Pós-Treino", defaultTime: "20:00"),
+            MealPattern(pattern: #"\blanche\s*da\s*tarde\b"#, mealType: .afternoonSnack, name: "Lanche da Tarde", defaultTime: "16:00"),
+            MealPattern(pattern: #"\blanche\b"#, mealType: .afternoonSnack, name: "Lanche", defaultTime: "16:00")
+        ]
+
+        for mp in mealPatterns {
+            guard let regex = try? NSRegularExpression(pattern: mp.pattern, options: [.caseInsensitive]) else { continue }
+            let nsText = text as NSString
+            if let match = regex.firstMatch(in: text, options: [], range: NSRange(location: 0, length: nsText.length)) {
+                if match.range.location <= 4 {
+                    let endOfMatch = match.range.location + match.range.length
+                    var remainder = nsText.substring(from: endOfMatch)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .trimmingCharacters(in: CharacterSet(charactersIn: "-—–:"))
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+                    if let parenTime = extractTime(from: remainder) {
+                        remainder = remainder.replacingOccurrences(of: "(\(parenTime))", with: "")
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                            .trimmingCharacters(in: CharacterSet(charactersIn: "-—–:"))
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+
+                    let lowerRem = remainder.lowercased()
+                    let prosePrefixes = ["e ", "ou ", "de ", "em ", "para ", "com ", "no ", "na "]
+                    for pp in prosePrefixes {
+                        if lowerRem.starts(with: pp) {
+                            return nil
+                        }
+                    }
+
+                    let chosenTime = (fallbackTime != "12:30" && fallbackTime != "07:30") ? fallbackTime : mp.defaultTime
+                    let finalInline = remainder.isEmpty ? nil : remainder
+                    return DetectedHeader(mealType: mp.mealType, name: mp.name, suggestedTime: chosenTime, inlineContent: finalInline)
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private static func defaultTimeForMealNumber(_ num: Int) -> String {
+        switch num {
+        case 1: return "07:30"
+        case 2: return "10:00"
+        case 3: return "12:30"
+        case 4: return "16:00"
+        case 5: return "19:30"
+        case 6: return "22:00"
+        default: return "12:00"
+        }
+    }
+
+    private static func defaultMealTypeForNumber(_ num: Int) -> MealType {
+        switch num {
+        case 1: return .breakfast
+        case 2: return .morningSnack
+        case 3: return .lunch
+        case 4: return .afternoonSnack
+        case 5: return .dinner
+        case 6: return .supper
+        default: return .lunch
+        }
+    }
+
+    private static func firstMatch(pattern: String, in text: String) -> (String, String, String)? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
+        let ns = text as NSString
+        guard let match = regex.firstMatch(in: text, options: [], range: NSRange(location: 0, length: ns.length)) else {
+            return nil
+        }
+        let g1 = match.numberOfRanges > 1 && match.range(at: 1).location != NSNotFound ? ns.substring(with: match.range(at: 1)) : ""
+        let g2 = match.numberOfRanges > 2 && match.range(at: 2).location != NSNotFound ? ns.substring(with: match.range(at: 2)) : ""
+        let g3 = match.numberOfRanges > 3 && match.range(at: 3).location != NSNotFound ? ns.substring(with: match.range(at: 3)) : ""
+        return (g1, g2, g3)
     }
 
     private static func extractTime(from line: String) -> String? {
@@ -236,25 +363,89 @@ public enum MealPlanImportEngine {
     // MARK: - Parsing de Alimentos da Refeição
 
     private static func parseSectionItems(text: String) -> [PlannedMealItem] {
-        let lines = text.components(separatedBy: .newlines)
+        let rawLines = text.components(separatedBy: .newlines)
+        var mergedLines: [String] = []
+
+        // 1. Reconstrução de quebras de linha acidentais de PDFs (ex: "... e 15 g de" + "azeite.")
+        var buffer = ""
+        for line in rawLines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+
+            if buffer.isEmpty {
+                buffer = trimmed
+            } else {
+                let lowerBuf = buffer.lowercased()
+                if lowerBuf.hasSuffix(" de") || lowerBuf.hasSuffix(" com") || lowerBuf.hasSuffix(" e") || lowerBuf.hasSuffix(" sem") || lowerBuf.hasSuffix(",") {
+                    buffer += " " + trimmed
+                } else {
+                    mergedLines.append(buffer)
+                    buffer = trimmed
+                }
+            }
+        }
+        if !buffer.isEmpty {
+            mergedLines.append(buffer)
+        }
+
         var items: [PlannedMealItem] = []
 
-        for rawLine in lines {
-            let clean = rawLine
+        for rawLine in mergedLines {
+            var clean = rawLine
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .trimmingCharacters(in: CharacterSet(charactersIn: "-*•·—–"))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
             guard !clean.isEmpty else { continue }
 
-            // Ignora notas secundárias ou substituições opcionais
             let lower = clean.lowercased()
             if lower.starts(with: "opção") || lower.starts(with: "obs") || lower.starts(with: "observação") || lower.starts(with: "ou ") {
                 continue
             }
+            if lower.contains("kcal") && (lower.contains("proteína") || lower.contains("carboidratos") || lower.contains("gordura")) {
+                continue
+            }
+            if lower.starts(with: "refeição ") || lower.starts(with: "total ") || lower.starts(with: "valores estimados") {
+                continue
+            }
+
+            let referencePrefixes = [
+                "igual ao almoço:", "igual ao almoco:", "igual ao almoço", "igual ao almoco",
+                "mesmo que o almoço:", "mesmo que o almoço",
+                "igual ao jantar:", "igual ao jantar"
+            ]
+            for prefix in referencePrefixes {
+                if lower.starts(with: prefix) {
+                    clean = String(clean.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+                    break
+                }
+            }
+
+            // Remove notas explicativas de modo de preparo ou restrições (ex: ", incluindo o preparo", "sem adição de azeite prevista")
+            let notesToRemove = [
+                #",\s*incluindo\s*(?:o\s*)?(?:preparo|[oó]leo).*"#,
+                #"sem\s*adi[cç][aã]o\s*de\s*.*"#,
+                #"\bconforme\s*prefer[eê]ncia\b"#,
+                #"\bà\s*vontade\b"#,
+                #"\bse\s*necess[aá]rio\b"#,
+                #"\bopcional\b"#,
+                #"\([^\)]*parte\s*comest[ií]vel[^\)]*\)"#,
+                #"\([^\)]*pesad[oa]s?\s*crus?[^\)]*\)"#
+            ]
+            for pattern in notesToRemove {
+                if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
+                    clean = regex.stringByReplacingMatches(in: clean, options: [], range: NSRange(location: 0, length: (clean as NSString).length), withTemplate: "")
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            }
+
+            guard !clean.isEmpty else { continue }
 
             let parsedMeal = MealParserEngine.shared.parse(text: clean)
             for parsedItem in parsedMeal.items {
+                if parsedItem.macros.calories > 4000.0 {
+                    continue
+                }
                 let plannedItem = toPlannedMealItem(parsedItem)
                 items.append(plannedItem)
             }

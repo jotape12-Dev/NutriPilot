@@ -1,4 +1,7 @@
 import XCTest
+#if canImport(PDFKit)
+import PDFKit
+#endif
 @testable import NutriPilotCore
 
 final class MealPlanImportEngineTests: XCTestCase {
@@ -139,5 +142,25 @@ final class MealPlanImportEngineTests: XCTestCase {
         XCTAssertEqual(store.activePlan?.meals.count, 2)
         XCTAssertNotNil(store.groceryList)
         XCTAssertFalse(store.groceryList?.items.isEmpty ?? true)
+    }
+
+    func testImportRealBrazilianClinicalDietPDF() {
+        let path = "/Users/jotape/Downloads/plano_alimentar_sem_whey.pdf"
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+            return
+        }
+
+        let plan = MealPlanImportEngine.importPlan(pdfData: data)
+        XCTAssertEqual(plan.meals.count, 5)
+        XCTAssertGreaterThan(plan.targetCalories, 2400.0)
+        XCTAssertLessThan(plan.targetCalories, 2550.0)
+        XCTAssertEqual(plan.meals[0].name, "Café da Manhã")
+        XCTAssertEqual(plan.meals[0].suggestedTime, "08:00")
+        XCTAssertEqual(plan.meals[1].name, "Almoço")
+        XCTAssertEqual(plan.meals[1].suggestedTime, "12:30")
+        XCTAssertEqual(plan.meals[3].name, "Pré-Treino")
+        XCTAssertEqual(plan.meals[3].suggestedTime, "19:00")
+        XCTAssertEqual(plan.meals[4].name, "Jantar")
+        XCTAssertEqual(plan.meals[4].suggestedTime, "21:00")
     }
 }
