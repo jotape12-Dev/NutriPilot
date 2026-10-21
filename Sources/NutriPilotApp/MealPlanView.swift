@@ -2,6 +2,7 @@ import SwiftUI
 #if canImport(NutriPilotCore)
 import NutriPilotCore
 #endif
+import UniformTypeIdentifiers
 
 public struct MealPlanView: View {
     public var targetCalories: Double
@@ -12,6 +13,7 @@ public struct MealPlanView: View {
 
     @State private var selectedSegment: PlanViewSegment = .plan
     @State private var itemToSubstitute: SubstitutionTarget?
+    @State private var isShowingImportSheet: Bool = false
     @State private var assistantMessages: [AssistantChatMessage] = [
         AssistantChatMessage(
             text: "Sou o assistente de bolso NutriPilot.\nRespondo qualquer dúvida em no máximo 4 linhas diretas.\nSeu foco hoje é bater a meta de proteínas sem estourar calorias.",
@@ -62,6 +64,42 @@ public struct MealPlanView: View {
             .navigationTitle("Plano Alimentar")
             .background(Color.appBackground)
             .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
+            .toolbar {
+                if selectedSegment == .plan && planStore.activePlan != nil {
+                    ToolbarItem(placement: .primaryAction) {
+                        Menu {
+                            Button {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                    planStore.generateAndSetActivePlan(target: currentEffectiveTarget)
+                                    hapticTrigger += 1
+                                }
+                            } label: {
+                                Label("Gerar Novo Plano com Base nas Metas", systemImage: "sparkles")
+                            }
+
+                            Button {
+                                isShowingImportSheet = true
+                                hapticTrigger += 1
+                            } label: {
+                                Label("Importar Outro Plano", systemImage: "doc.badge.plus")
+                            }
+
+                            Divider()
+
+                            Button(role: .destructive) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                    planStore.clear()
+                                    hapticTrigger += 1
+                                }
+                            } label: {
+                                Label("Excluir Plano Atual", systemImage: "trash")
+                            }
+                        } label: {
+                            Label("Opções do Plano", systemImage: "ellipsis.circle")
+                        }
+                    }
+                }
+            }
             .sheet(item: $itemToSubstitute) { target in
                 FoodSubstitutionSheet(target: target) { newItem in
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
@@ -70,16 +108,11 @@ public struct MealPlanView: View {
                     }
                 }
             }
-            .onAppear {
-                ensureActivePlanExists()
+            .sheet(isPresented: $isShowingImportSheet) {
+                MealPlanImportSheet(planStore: planStore) {
+                    hapticTrigger += 1
+                }
             }
-        }
-    }
-
-    private func ensureActivePlanExists() {
-        if planStore.activePlan == nil {
-            let target = currentEffectiveTarget
-            planStore.generateAndSetActivePlan(target: target)
         }
     }
 
@@ -144,35 +177,72 @@ public struct MealPlanView: View {
     }
 
     private var emptyPlanView: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 16) {
             Image(systemName: "fork.knife.circle")
-                .font(.system(size: 48))
+                .font(.system(size: 64))
                 .foregroundColor(.green)
-            Text("Nenhum plano alimentar ativo")
-                .font(.headline)
-            Text("Gere um cardápio diário estruturado e balanceado com base nas suas metas nutricionais.")
+                .padding(.top, 8)
+
+            Text("Nenhum Plano Alimentar Salvo")
+                .font(.title3.bold())
+                .foregroundColor(.primary)
+
+            Text("Você ainda não possui um plano alimentar ativo. Você pode gerar um plano proporcional automaticamente com base nas suas metas nutricionais ou importar a dieta que você já tem do seu nutricionista.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-            Button {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                    planStore.generateAndSetActivePlan(target: currentEffectiveTarget)
-                    hapticTrigger += 1
-                }
-            } label: {
-                Label("Gerar Plano Diário", systemImage: "sparkles")
+                .lineSpacing(3)
+                .padding(.horizontal, 8)
+
+            VStack(spacing: 12) {
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        planStore.generateAndSetActivePlan(target: currentEffectiveTarget)
+                        hapticTrigger += 1
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkles")
+                        Text("Gerar Plano com Base nas Metas")
+                    }
                     .font(.headline)
                     .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
                     .background(Color.green)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .shadow(color: Color.green.opacity(0.3), radius: 5, y: 2)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    isShowingImportSheet = true
+                    hapticTrigger += 1
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "doc.badge.plus")
+                        Text("Importar Meu Plano Existente")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.blue)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.blue.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.blue.opacity(0.35), lineWidth: 1.5)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
             }
+            .padding(.top, 8)
         }
         .padding(24)
         .frame(maxWidth: .infinity)
         .background(Color.appCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: Color.black.opacity(0.03), radius: 4, y: 1)
     }
 
     private func planSummaryHeader(plan: DailyMealPlan) -> some View {
@@ -187,14 +257,36 @@ public struct MealPlanView: View {
                         .foregroundColor(.primary)
                 }
                 Spacer()
-                Button {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        planStore.generateAndSetActivePlan(target: currentEffectiveTarget)
+                Menu {
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                            planStore.generateAndSetActivePlan(target: currentEffectiveTarget)
+                            hapticTrigger += 1
+                        }
+                    } label: {
+                        Label("Gerar Novo Plano com Base nas Metas", systemImage: "sparkles")
+                    }
+
+                    Button {
+                        isShowingImportSheet = true
                         hapticTrigger += 1
+                    } label: {
+                        Label("Importar Outro Plano", systemImage: "doc.badge.plus")
+                    }
+
+                    Divider()
+
+                    Button(role: .destructive) {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                            planStore.clear()
+                            hapticTrigger += 1
+                        }
+                    } label: {
+                        Label("Excluir Plano Atual", systemImage: "trash")
                     }
                 } label: {
-                    Label("Regenerar", systemImage: "arrow.triangle.2.circlepath")
-                        .font(.caption.bold())
+                    Label("Opções do Plano", systemImage: "ellipsis.circle")
+                        .font(.subheadline.bold())
                 }
                 .buttonStyle(.bordered)
             }
@@ -293,7 +385,9 @@ public struct MealPlanView: View {
     private var groceriesView: some View {
         ScrollView {
             VStack(spacing: 16) {
-                if let list = planStore.groceryList, !list.items.isEmpty {
+                if planStore.activePlan == nil {
+                    emptyGroceriesNoPlanView
+                } else if let list = planStore.groceryList, !list.items.isEmpty {
                     // Barra de Progresso do Mercado
                     groceryProgressBar(list: list)
 
@@ -313,6 +407,48 @@ public struct MealPlanView: View {
         }
     }
 
+    private var emptyGroceriesNoPlanView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "cart.badge.questionmark")
+                .font(.system(size: 54))
+                .foregroundColor(.secondary)
+                .padding(.top, 8)
+
+            Text("Nenhum Plano Alimentar Ativo")
+                .font(.headline)
+
+            Text("Cadastre ou gere um plano alimentar na aba 'Plano Diário' para gerar automaticamente sua lista de compras da semana.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(2)
+
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    selectedSegment = .plan
+                    hapticTrigger += 1
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                    Text("Ir para Plano Diário")
+                }
+                .font(.subheadline.bold())
+                .foregroundColor(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.green)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity)
+        .background(Color.appCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
     private var emptyGroceriesView: some View {
         VStack(spacing: 14) {
             Image(systemName: "cart.badge.questionmark")
@@ -326,11 +462,7 @@ public struct MealPlanView: View {
                 .multilineTextAlignment(.center)
             Button {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                    if planStore.activePlan == nil {
-                        planStore.generateAndSetActivePlan(target: currentEffectiveTarget)
-                    } else {
-                        planStore.generateGroceryList(numberOfDays: 7)
-                    }
+                    planStore.generateGroceryList(numberOfDays: 7)
                     hapticTrigger += 1
                 }
             } label: {
@@ -824,5 +956,289 @@ private struct FoodSubstitutionSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+// MARK: - Folha Modal de Importação de Plano Existente
+
+public struct MealPlanImportSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    public var planStore: MealPlanStore
+    public var onSaved: () -> Void
+
+    public enum ImportMode: String, CaseIterable, Identifiable {
+        case pasteText = "Colar Texto"
+        case uploadPDF = "Subir PDF"
+
+        public var id: String { rawValue }
+    }
+
+    @State private var importMode: ImportMode = .pasteText
+    @State private var planText: String = ""
+    @State private var showFileImporter: Bool = false
+    @State private var selectedPDFData: Data? = nil
+    @State private var selectedPDFFileName: String? = nil
+    @State private var errorMessage: String? = nil
+    @State private var isProcessing: Bool = false
+
+    public init(planStore: MealPlanStore = .shared, onSaved: @escaping () -> Void = {}) {
+        self.planStore = planStore
+        self.onSaved = onSaved
+    }
+
+    private var canSubmit: Bool {
+        switch importMode {
+        case .pasteText:
+            return !planText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .uploadPDF:
+            return selectedPDFData != nil
+        }
+    }
+
+    public var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                // Segment Picker
+                Picker("Modo de Importação", selection: $importMode) {
+                    ForEach(ImportMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.top, 12)
+
+                if let error = errorMessage {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Button {
+                            errorMessage = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(10)
+                    .background(Color.orange.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal)
+                }
+
+                // Conteúdo baseado no modo selecionado
+                switch importMode {
+                case .pasteText:
+                    pasteTextModeView
+                case .uploadPDF:
+                    uploadPDFModeView
+                }
+
+                Spacer()
+
+                // Botão de Ação "Processar e Salvar Plano"
+                Button {
+                    processAndSave()
+                } label: {
+                    HStack(spacing: 8) {
+                        if isProcessing {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Image(systemName: "arrow.down.doc.fill")
+                            Text("Processar e Salvar Plano")
+                        }
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(canSubmit ? Color.green : Color.gray.opacity(0.4))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .shadow(color: canSubmit ? Color.green.opacity(0.3) : Color.clear, radius: 4, y: 2)
+                }
+                .disabled(!canSubmit || isProcessing)
+                .buttonStyle(.plain)
+                .padding(.horizontal)
+                .padding(.bottom, 16)
+            }
+            .navigationTitle("Importar Plano")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .background(Color.appBackground)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+            }
+            .fileImporter(
+                isPresented: $showFileImporter,
+                allowedContentTypes: [.pdf],
+                allowsMultipleSelection: false
+            ) { result in
+                handleFileImportResult(result)
+            }
+        }
+    }
+
+    private var pasteTextModeView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Cole aqui a prescrição ou cardápio enviado pelo seu nutricionista:")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $planText)
+                    .padding(8)
+                    .background(Color.appCardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                    )
+
+                if planText.isEmpty {
+                    Text("Exemplo:\nCafé da manhã (07:30):\n• 2 ovos mexidos\n• 2 fatias de pão integral\n• 1 xícara de café com leite\n\nAlmoço (12:30):\n• 150g de peito de frango grelhado\n• 150g de arroz branco cozido\n• 100g de feijão preto\n• Salada à vontade")
+                        .font(.footnote)
+                        .foregroundColor(.secondary.opacity(0.6))
+                        .padding(16)
+                        .allowsHitTesting(false)
+                }
+            }
+            .frame(maxHeight: 280)
+
+            Text("O NutriPilot detecta automaticamente horários, refeições e cruza alimentos com a tabela TBCA.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal)
+    }
+
+    private var uploadPDFModeView: some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 12) {
+                Image(systemName: "doc.badge.plus")
+                    .font(.system(size: 48))
+                    .foregroundColor(.blue)
+
+                Text("Selecione o PDF da sua Dieta")
+                    .font(.headline)
+
+                Text("Compatível com PDFs prescritos por nutricionistas, clínicas ou aplicativos como Dietbox, Webdiet e Nutrium.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                Button {
+                    showFileImporter = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "folder")
+                        Text(selectedPDFFileName == nil ? "Escolher Arquivo PDF" : "Substituir Arquivo PDF")
+                    }
+                    .font(.subheadline.bold())
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(Color.blue)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity)
+            .background(Color.appCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+
+            if let name = selectedPDFFileName, let data = selectedPDFData {
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.title3)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(name)
+                            .font(.subheadline.bold())
+                            .lineLimit(1)
+                        Text(String(format: "%.1f KB", Double(data.count) / 1024.0))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        selectedPDFData = nil
+                        selectedPDFFileName = nil
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                    }
+                }
+                .padding(12)
+                .background(Color.appCardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private func handleFileImportResult(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            guard url.startAccessingSecurityScopedResource() else {
+                errorMessage = "Permissão negada para acessar o arquivo selecionado."
+                return
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+
+            do {
+                let data = try Data(contentsOf: url)
+                self.selectedPDFData = data
+                self.selectedPDFFileName = url.lastPathComponent
+                self.errorMessage = nil
+            } catch {
+                self.errorMessage = "Falha ao ler o arquivo PDF: \(error.localizedDescription)"
+            }
+        case .failure(let error):
+            self.errorMessage = "Erro ao selecionar arquivo: \(error.localizedDescription)"
+        }
+    }
+
+    private func processAndSave() {
+        isProcessing = true
+        errorMessage = nil
+
+        let imported: MealPlan
+        switch importMode {
+        case .pasteText:
+            imported = MealPlanImportEngine.importPlan(text: planText)
+        case .uploadPDF:
+            guard let data = selectedPDFData else {
+                isProcessing = false
+                return
+            }
+            imported = MealPlanImportEngine.importPlan(pdfData: data)
+        }
+
+        if imported.meals.isEmpty {
+            isProcessing = false
+            errorMessage = "Não foi possível extrair refeições válidas. Certifique-se de que o texto ou PDF contenha alimentos com quantidades."
+            return
+        }
+
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+            planStore.setActivePlan(imported)
+        }
+        onSaved()
+        isProcessing = false
+        dismiss()
     }
 }
