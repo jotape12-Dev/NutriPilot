@@ -167,9 +167,19 @@ public final class MealParserEngine: Sendable {
         parse(text: text)
     }
 
+    /// Analisa o texto de uma refeição específica com tipo contextual.
+    public func parse(mealInput: String, mealType: MealType = .lunch) -> ParsedMeal {
+        parse(text: mealInput)
+    }
+
     /// Chamada estática conveniente na instância compartilhada.
     public static func parseMeal(text: String) -> ParsedMeal {
         shared.parse(text: text)
+    }
+
+    /// Chamada estática conveniente com tipo de refeição.
+    public static func parse(mealInput: String, mealType: MealType = .lunch) -> ParsedMeal {
+        shared.parse(text: mealInput)
     }
 
     // MARK: - Divisão de Frases em Itens

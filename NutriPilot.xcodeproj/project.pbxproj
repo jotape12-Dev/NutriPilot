@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		41A1D2B4A1D9C2E3F4B5A6E8 /* MealPlanImportEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A1D2B4A1D9C2E3F4B5A6E9 /* MealPlanImportEngine.swift */; };
 		0CCDD1EE5048633E99E431EF /* MealPlanGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F925E38527D516FD6696BAE /* MealPlanGenerator.swift */; };
 		0D4EE13EC322DF3E4AA912B9 /* NutritionTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D3809FDDE9B5D84817CA80 /* NutritionTarget.swift */; };
 		0F5088D5CAFADB754BD646DF /* BioimpedancePDFParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F084B9EDA01AC4294F205CB5 /* BioimpedancePDFParser.swift */; };
@@ -44,6 +45,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		41A1D2B4A1D9C2E3F4B5A6E9 /* MealPlanImportEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanImportEngine.swift; sourceTree = "<group>"; };
 		0513E44A3B68CD94BF672A55 /* WaterLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterLog.swift; sourceTree = "<group>"; };
 		05D3809FDDE9B5D84817CA80 /* NutritionTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionTarget.swift; sourceTree = "<group>"; };
 		06B3E96CF132828B7C3A7E11 /* ReportExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportExporter.swift; sourceTree = "<group>"; };
@@ -61,7 +63,7 @@
 		46BEF6B2159841EBBD3F1BB7 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		4BB090A702E8772CEB926B55 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		6521F2E0F35B5DCFE9EC2F1A /* MealPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanView.swift; sourceTree = "<group>"; };
-		6794148A21436C4483AB9606 /* NutriPilot.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NutriPilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6794148A21436C4483AB9606 /* NutriPilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NutriPilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6FAC8D5FCD47ABC0E1AA0CF7 /* WaterStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterStore.swift; sourceTree = "<group>"; };
 		70D1B5BEDED968B1CD167E71 /* ReportExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportExportView.swift; sourceTree = "<group>"; };
 		7C8ABAE5AD21302E7C591554 /* BodyProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyProgressView.swift; sourceTree = "<group>"; };
@@ -146,11 +148,20 @@
 			path = Storage;
 			sourceTree = "<group>";
 		};
+		41A1D2B4A1D9C2E3F4B5A6E7 /* MealPlan */ = {
+			isa = PBXGroup;
+			children = (
+				41A1D2B4A1D9C2E3F4B5A6E9 /* MealPlanImportEngine.swift */,
+			);
+			path = MealPlan;
+			sourceTree = "<group>";
+		};
 		C4BF06BA981A9D633A9F7347 /* NutriPilotCore */ = {
 			isa = PBXGroup;
 			children = (
 				13403AA973FD1A846AFADCE1 /* Bioimpedance */,
 				11640D345FFEE0C2898C4663 /* Export */,
+				41A1D2B4A1D9C2E3F4B5A6E7 /* MealPlan */,
 				F68138B08F7909DA02DDC073 /* Models */,
 				DFD0179C41BC9FCD4EFD35F9 /* Nutrition */,
 				173B4112C8713295D91CCBB7 /* Seed */,
@@ -287,6 +298,7 @@
 				839A478B809BC801D3CFBFFF /* MealParserConfirmationSheet.swift in Sources */,
 				F4ADE674DAF3158D15D48490 /* MealParserEngine.swift in Sources */,
 				0CCDD1EE5048633E99E431EF /* MealPlanGenerator.swift in Sources */,
+				41A1D2B4A1D9C2E3F4B5A6E8 /* MealPlanImportEngine.swift in Sources */,
 				3CBDC482E860A56821A67DD2 /* MealPlanStore.swift in Sources */,
 				3A9A518982632C0A7C059916 /* MealPlanView.swift in Sources */,
 				97A5FEF08D91ABC97491144B /* MealStore.swift in Sources */,
@@ -440,6 +452,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6F2KGULZ85;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "O NutriPilot utiliza o microfone para transcrição rápida por voz das suas refeições.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "O NutriPilot analisa o áudio para identificar alimentos e porções da TBCA.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -460,6 +473,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6F2KGULZ85;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "O NutriPilot utiliza o microfone para transcrição rápida por voz das suas refeições.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "O NutriPilot analisa o áudio para identificar alimentos e porções da TBCA.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

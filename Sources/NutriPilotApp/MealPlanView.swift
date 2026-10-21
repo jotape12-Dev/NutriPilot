@@ -23,7 +23,7 @@ public struct MealPlanView: View {
     @State private var hapticTrigger: Int = 0
 
     public init(
-        targetCalories: Double = 2500,
+        targetCalories: Double = 0,
         mealStore: MealStore = .shared,
         waterStore: WaterStore = .shared,
         profileStore: ProfileStore = .shared,
@@ -87,12 +87,25 @@ public struct MealPlanView: View {
         if let target = profileStore.currentTarget {
             return target
         }
+        if let profile = profileStore.currentProfile {
+            let calc = NutritionCalculator.calculateFullTarget(from: profile)
+            return NutritionTarget(
+                calories: calc.targetCalories,
+                proteinGrams: calc.targetProteinGrams,
+                carbsGrams: calc.targetCarbsGrams,
+                fatGrams: calc.targetFatGrams,
+                fiberGrams: calc.targetFiberGrams,
+                waterMl: calc.targetWaterMl,
+                source: .initialCalculation
+            )
+        }
+        let calories = targetCalories > 0 ? targetCalories : 2000.0
         return NutritionTarget(
-            calories: targetCalories > 0 ? targetCalories : 2200,
-            proteinGrams: (targetCalories > 0 ? targetCalories : 2200) * 0.30 / 4.0,
-            carbsGrams: (targetCalories > 0 ? targetCalories : 2200) * 0.45 / 4.0,
-            fatGrams: (targetCalories > 0 ? targetCalories : 2200) * 0.25 / 9.0,
-            waterMl: 2800
+            calories: calories,
+            proteinGrams: (calories * 0.25 / 4.0).rounded(),
+            carbsGrams: (calories * 0.50 / 4.0).rounded(),
+            fatGrams: (calories * 0.25 / 9.0).rounded(),
+            waterMl: NutritionCalculator.calculateWaterMl(weightKg: 70, activityLevel: .moderate)
         )
     }
 

@@ -70,6 +70,9 @@ public struct PlannedMeal: Identifiable, Codable, Sendable, Equatable {
     public var totalFiber: Double { items.reduce(0) { $0 + $1.fiberGrams }.rounded(to: 1) }
 }
 
+/// Cardápio diário completo com refeições estruturadas.
+public typealias MealPlan = DailyMealPlan
+
 /// Cardápio diário completo com 4 refeições proporcionais (25%, 35%, 15%, 25%).
 public struct DailyMealPlan: Identifiable, Codable, Sendable, Equatable {
     public let id: UUID

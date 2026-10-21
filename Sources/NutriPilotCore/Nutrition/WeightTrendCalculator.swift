@@ -127,39 +127,44 @@ public enum WeightTrendCalculator {
             .filter { $0.date >= cutoffDate && $0.date <= referenceDate }
             .sorted { $0.date < $1.date }
 
-        guard recentPoints.count >= 2 else {
-            // Se não houver ao menos 2 medições na janela estrita, usa as 2 últimas medições disponíveis
-            let sortedAll = measurements.sorted { $0.date < $1.date }
-            guard sortedAll.count >= 2 else { return nil }
-            let p1 = sortedAll[sortedAll.count - 2]
-            let p2 = sortedAll[sortedAll.count - 1]
-            let dayDiff = max(1.0, calendar.dateComponents([.day], from: p1.date, to: p2.date).day.map(Double.init) ?? 1.0)
-            let delta = p2.weightKg - p1.weightKg
-            return ((delta / dayDiff) * 7.0).rounded(to: 2)
+        let recentDistinctDays = Set(recentPoints.map { calendar.startOfDay(for: $0.date) })
+        if recentDistinctDays.count >= 2 {
+            // Regressão Linear Simples: y = peso, x = dias a partir do ponto inicial
+            let t0 = recentPoints[0].date
+            var sumX: Double = 0
+            var sumY: Double = 0
+            var sumXY: Double = 0
+            var sumX2: Double = 0
+            let n = Double(recentPoints.count)
+
+            for p in recentPoints {
+                let days = max(0.0, p.date.timeIntervalSince(t0) / 86400.0)
+                sumX += days
+                sumY += p.weightKg
+                sumXY += (days * p.weightKg)
+                sumX2 += (days * days)
+            }
+
+            let denominator = (n * sumX2) - (sumX * sumX)
+            if abs(denominator) > 0.0001 {
+                let slopePerDay = ((n * sumXY) - (sumX * sumY)) / denominator
+                let weeklyRate = slopePerDay * 7.0
+                return weeklyRate.rounded(to: 2)
+            }
         }
 
-        // Regressão Linear Simples: y = peso, x = dias a partir do ponto inicial
-        let t0 = recentPoints[0].date
-        var sumX: Double = 0
-        var sumY: Double = 0
-        var sumXY: Double = 0
-        var sumX2: Double = 0
-        let n = Double(recentPoints.count)
+        // Se na janela não houver 2 dias distintos, verifica no histórico total se há ao menos 2 pesagens em dias distintos
+        let sortedAll = measurements.sorted { $0.date < $1.date }
+        let allDistinctDays = Set(sortedAll.map { calendar.startOfDay(for: $0.date) })
+        guard allDistinctDays.count >= 2, let last = sortedAll.last else { return nil }
 
-        for p in recentPoints {
-            let days = max(0.0, p.date.timeIntervalSince(t0) / 86400.0)
-            sumX += days
-            sumY += p.weightKg
-            sumXY += (days * p.weightKg)
-            sumX2 += (days * days)
+        guard let prev = sortedAll.reversed().first(where: { !calendar.isDate($0.date, inSameDayAs: last.date) }) else {
+            return nil
         }
-
-        let denominator = (n * sumX2) - (sumX * sumX)
-        guard denominator != 0 else { return 0.0 }
-
-        let slopePerDay = ((n * sumXY) - (sumX * sumY)) / denominator
-        let weeklyRate = slopePerDay * 7.0
-        return weeklyRate.rounded(to: 2)
+        let dayDiff = Double(abs(calendar.dateComponents([.day], from: calendar.startOfDay(for: prev.date), to: calendar.startOfDay(for: last.date)).day ?? 0))
+        guard dayDiff >= 1.0 else { return nil }
+        let delta = last.weightKg - prev.weightKg
+        return ((delta / dayDiff) * 7.0).rounded(to: 2)
     }
 
     // MARK: - Projeção de Alcance de Meta (Nutrium WeightPrediction)
@@ -214,8 +219,17 @@ public enum WeightTrendCalculator {
             theoreticalVelocity = nil
         }
 
-        // Adota o ritmo observado real; se indisponível, usa o teórico
-        let effectiveVelocity = observedVelocity ?? theoreticalVelocity ?? 0.0
+        // Adota o ritmo observado real; se indisponível, usa o teórico. Se nenhum for calculável, dados insuficientes.
+        guard let effectiveVelocity = observedVelocity ?? theoreticalVelocity else {
+            return WeightPredictionResult(
+                currentTrendWeightKg: currentTrend,
+                targetWeightKg: targetWeightKg,
+                weeklyRateKg: 0,
+                estimatedDailyCaloricImbalance: 0,
+                projectedDate: nil,
+                status: .insufficientData(reason: "Necessário ao menos 2 pesagens em dias distintos para projetar a velocidade.")
+            )
+        }
         let estimatedDailyCalories = (effectiveVelocity * kcalPerKgTissue) / 7.0
 
         // Se ritmo semanal for praticamente nulo (platô)

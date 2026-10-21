@@ -28,7 +28,7 @@ public struct BodyProgressView: View {
     }
 
     private var profileWeight: Double {
-        profileStore.currentProfile?.currentWeightKg ?? 78.4
+        profileStore.currentProfile?.currentWeightKg ?? 0.0
     }
 
     private var latestWeight: Double {
@@ -39,8 +39,8 @@ public struct BodyProgressView: View {
         bodyStore.currentTrendWeight(spanDays: 7) ?? latestWeight
     }
 
-    private var weeklyDeltaKg: Double {
-        bodyStore.weeklyVelocity(daysWindow: 14) ?? -0.45
+    private var weeklyDeltaKg: Double? {
+        bodyStore.weeklyVelocity(daysWindow: 14)
     }
 
     private var timeWindowDays: Int {
@@ -59,8 +59,10 @@ public struct BodyProgressView: View {
                 WeightPoint(date: $0.date, actualWeight: $0.actualWeightKg, trendWeight: $0.trendWeightKg)
             }
             return filteredPoints(points)
+        } else if let single = bodyStore.latestMeasurement {
+            return [WeightPoint(date: single.measuredAt, actualWeight: single.weightKg, trendWeight: single.weightKg)]
         } else {
-            return filteredPoints(WeightPoint.sampleHistory(baseWeight: latestWeight))
+            return []
         }
     }
 
@@ -189,16 +191,18 @@ public struct BodyProgressView: View {
                         .font(.title2.bold())
                         .foregroundColor(.secondary)
 
-                    HStack(spacing: 4) {
-                        Image(systemName: weeklyDeltaKg <= 0 ? "arrow.down.right" : "arrow.up.right")
-                        Text(String(format: "%+.2f kg/sem", weeklyDeltaKg))
+                    if let delta = weeklyDeltaKg {
+                        HStack(spacing: 4) {
+                            Image(systemName: delta <= 0 ? "arrow.down.right" : "arrow.up.right")
+                            Text(String(format: "%+.2f kg/sem", delta))
+                        }
+                        .font(.caption.bold())
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(delta <= 0 ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
+                        .foregroundColor(delta <= 0 ? .green : .orange)
+                        .clipShape(Capsule())
                     }
-                    .font(.caption.bold())
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(weeklyDeltaKg <= 0 ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
-                    .foregroundColor(weeklyDeltaKg <= 0 ? .green : .orange)
-                    .clipShape(Capsule())
                 }
             }
 
@@ -267,52 +271,69 @@ public struct BodyProgressView: View {
 
             #if canImport(Charts)
             let points = displayChartPoints
-            let minY = max(40.0, (points.map(\.trendWeight).min() ?? latestWeight) - 2.0)
-            let maxY = (points.map(\.trendWeight).max() ?? latestWeight) + 2.0
+            if points.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.largeTitle)
+                        .foregroundColor(.secondary.opacity(0.6))
+                    Text("Nenhuma pesagem registrada")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.secondary)
+                    Text("Registre suas pesagens diárias para visualizar a curva de tendência real.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(height: 220)
+                .frame(maxWidth: .infinity)
+            } else {
+                let minY = max(40.0, (points.map(\.trendWeight).min() ?? latestWeight) - 2.0)
+                let maxY = (points.map(\.trendWeight).max() ?? latestWeight) + 2.0
 
-            Chart {
-                // Pontos reais de pesagem diária (cinza / suave)
-                ForEach(points) { point in
-                    if let actual = point.actualWeight {
-                        PointMark(
+                Chart {
+                    // Pontos reais de pesagem diária (cinza / suave)
+                    ForEach(points) { point in
+                        if let actual = point.actualWeight {
+                            PointMark(
+                                x: .value("Data", point.date, unit: .day),
+                                y: .value("Pesagem", actual)
+                            )
+                            .foregroundStyle(Color.secondary.opacity(0.55))
+                            .symbolSize(36)
+                        }
+
+                        // Linha contínua da tendência EWMA (verde viva)
+                        LineMark(
                             x: .value("Data", point.date, unit: .day),
-                            y: .value("Pesagem", actual)
+                            y: .value("Tendência", point.trendWeight)
                         )
-                        .foregroundStyle(Color.secondary.opacity(0.55))
-                        .symbolSize(36)
+                        .foregroundStyle(Color.green)
+                        .interpolationMethod(.catmullRom)
+                        .lineStyle(StrokeStyle(lineWidth: 3))
+
+                        AreaMark(
+                            x: .value("Data", point.date, unit: .day),
+                            yStart: .value("Base", minY),
+                            yEnd: .value("Tendência", point.trendWeight)
+                        )
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color.green.opacity(0.18), Color.green.opacity(0.0)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
                     }
-
-                    // Linha contínua da tendência EWMA (verde viva)
-                    LineMark(
-                        x: .value("Data", point.date, unit: .day),
-                        y: .value("Tendência", point.trendWeight)
-                    )
-                    .foregroundStyle(Color.green)
-                    .interpolationMethod(.catmullRom)
-                    .lineStyle(StrokeStyle(lineWidth: 3))
-
-                    AreaMark(
-                        x: .value("Data", point.date, unit: .day),
-                        yStart: .value("Base", minY),
-                        yEnd: .value("Tendência", point.trendWeight)
-                    )
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.green.opacity(0.18), Color.green.opacity(0.0)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
                 }
-            }
-            .chartYScale(domain: minY...maxY)
-            .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: 5)) { _ in
-                    AxisGridLine()
-                    AxisValueLabel(format: .dateTime.day().month())
+                .chartYScale(domain: minY...maxY)
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                        AxisGridLine()
+                        AxisValueLabel(format: .dateTime.day().month())
+                    }
                 }
+                .frame(height: 220)
             }
-            .frame(height: 220)
             #else
             Text("Gráficos suportados no iOS 16+")
                 .frame(height: 180)
@@ -700,22 +721,6 @@ public struct WeightPoint: Identifiable, Sendable {
     public let date: Date
     public let actualWeight: Double?
     public let trendWeight: Double
-
-    public static func sampleHistory(baseWeight: Double) -> [WeightPoint] {
-        let calendar = Calendar.current
-        let today = Date()
-        var points: [WeightPoint] = []
-        var trend = baseWeight + 1.2
-
-        for i in (0..<30).reversed() {
-            guard let date = calendar.date(byAdding: .day, value: -i, to: today) else { continue }
-            trend -= 0.04
-            let noise = sin(Double(i)) * 0.35
-            let actual = trend + noise
-            points.append(WeightPoint(date: date, actualWeight: actual.rounded(to: 1), trendWeight: trend.rounded(to: 1)))
-        }
-        return points
-    }
 }
 
 // MARK: - Sheets de Entrada de Dados
