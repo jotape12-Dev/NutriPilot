@@ -18,4 +18,7 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.jotape.NutriPilot
       INFOPLIST_KEY_UILaunchScreen_Generation: YES
-      INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+      INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
+      INFOPLIST_KEY_NSMicrophoneUsageDescription: "O NutriPilot utiliza o microfone para transcrição rápida por voz das suas refeições."
+      INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "O NutriPilot analisa o áudio para identificar alimentos e porções da TBCA."
+      CODE_SIGN_STYLE: Automatic
