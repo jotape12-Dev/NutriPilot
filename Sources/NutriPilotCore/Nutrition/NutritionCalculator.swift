@@ -9,6 +9,7 @@ public struct NutritionCalculationResult: Sendable, Equatable {
     public let targetFatGrams: Double
     public let targetFiberGrams: Double
     public let targetWaterMl: Double
+    public let formulaUsed: String
 
     public init(
         bmr: Double,
@@ -18,7 +19,8 @@ public struct NutritionCalculationResult: Sendable, Equatable {
         targetCarbsGrams: Double,
         targetFatGrams: Double,
         targetFiberGrams: Double,
-        targetWaterMl: Double
+        targetWaterMl: Double,
+        formulaUsed: String = "Mifflin-St Jeor"
     ) {
         self.bmr = bmr
         self.tdee = tdee
@@ -28,6 +30,7 @@ public struct NutritionCalculationResult: Sendable, Equatable {
         self.targetFatGrams = targetFatGrams
         self.targetFiberGrams = targetFiberGrams
         self.targetWaterMl = targetWaterMl
+        self.formulaUsed = formulaUsed
     }
 }
 
@@ -41,6 +44,18 @@ public enum NutritionCalculator {
         case .female:
             return (base - 161.0).rounded()
         }
+    }
+
+    /// Calcula a Taxa Metabólica Basal (TMB / BMR) usando a fórmula Katch-McArdle baseada em massa magra (kg).
+    /// TMB = 370 + (21.6 * leanMassKg)
+    public static func calculateBMRKatchMcArdle(leanMassKg: Double) -> Double {
+        return (370.0 + (21.6 * leanMassKg)).rounded()
+    }
+
+    /// Calcula a Taxa Metabólica Basal (TMB / BMR) usando Katch-McArdle a partir do peso e percentual de gordura.
+    public static func calculateBMRKatchMcArdle(weightKg: Double, bodyFatPercentage: Double) -> Double {
+        let leanMassKg = max(0.0, weightKg * (1.0 - (bodyFatPercentage / 100.0)))
+        return calculateBMRKatchMcArdle(leanMassKg: leanMassKg)
     }
 
     /// Calcula o Gasto Energético Total (GET / TDEE) baseado no nível de atividade.
@@ -66,13 +81,31 @@ public enum NutritionCalculator {
     }
 
     /// Executa o cálculo nutricional completo determinístico a partir do perfil do usuário.
-    public static func calculateFullTarget(from profile: UserProfile) -> NutritionCalculationResult {
-        let bmr = calculateBMR(
-            weightKg: profile.currentWeightKg,
-            heightCm: profile.heightCm,
-            age: profile.age,
-            sex: profile.sex
-        )
+    /// Se `leanMassKg` ou `bodyFatPercentage` forem informados (ex: via laudo de bioimpedância),
+    /// utiliza a equação Katch-McArdle, trazendo maior precisão clínica.
+    public static func calculateFullTarget(
+        from profile: UserProfile,
+        leanMassKg: Double? = nil,
+        bodyFatPercentage: Double? = nil
+    ) -> NutritionCalculationResult {
+        let bmr: Double
+        let formulaUsed: String
+
+        if let leanMass = leanMassKg, leanMass > 0 {
+            bmr = calculateBMRKatchMcArdle(leanMassKg: leanMass)
+            formulaUsed = "Katch-McArdle (Bioimpedância)"
+        } else if let bf = bodyFatPercentage, bf > 0, bf < 100 {
+            bmr = calculateBMRKatchMcArdle(weightKg: profile.currentWeightKg, bodyFatPercentage: bf)
+            formulaUsed = "Katch-McArdle (Bioimpedância)"
+        } else {
+            bmr = calculateBMR(
+                weightKg: profile.currentWeightKg,
+                heightCm: profile.heightCm,
+                age: profile.age,
+                sex: profile.sex
+            )
+            formulaUsed = "Mifflin-St Jeor"
+        }
 
         let tdee = calculateTDEE(bmr: bmr, activityLevel: profile.activityLevel)
         let rawTargetCalories = tdee * (1.0 + profile.goal.calorieAdjustmentPercent)
@@ -117,7 +150,8 @@ public enum NutritionCalculator {
             targetCarbsGrams: carbsGrams,
             targetFatGrams: fatGrams,
             targetFiberGrams: fiberGrams,
-            targetWaterMl: waterMl
+            targetWaterMl: waterMl,
+            formulaUsed: formulaUsed
         )
     }
 }
