@@ -142,6 +142,19 @@ public struct MealPlanView: View {
         )
     }
 
+    private var planComplianceReport: PlanComplianceReport? {
+        guard let plan = planStore.activePlan else { return nil }
+        let target = currentEffectiveTarget
+        let goal = profileStore.currentProfile?.goal
+        let weight = profileStore.currentProfile?.currentWeightKg
+        return MealPlanComplianceEvaluator.evaluate(
+            plan: plan,
+            target: target,
+            goal: goal,
+            currentWeightKg: weight
+        )
+    }
+
     // MARK: - 1. Segment Picker Header
 
     private var segmentPickerHeader: some View {
@@ -162,6 +175,11 @@ public struct MealPlanView: View {
                 if let plan = planStore.activePlan {
                     // Card de Resumo de Metas do Plano
                     planSummaryHeader(plan: plan)
+
+                    // Avaliação e Conformidade Nutricional do Plano
+                    if let report = planComplianceReport {
+                        planComplianceCard(report: report)
+                    }
 
                     // Lista de Refeições Planejadas do Core
                     ForEach(plan.meals) { meal in
@@ -314,6 +332,182 @@ public struct MealPlanView: View {
                 .foregroundColor(color)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Avaliação Clínica do Plano (Conformidade Nutricional)
+
+    private func planComplianceCard(report: PlanComplianceReport) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            // Cabeçalho com Título e Nível Geral
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .foregroundColor(.green)
+                        .font(.caption.bold())
+                    Text("AVALIAÇÃO CLÍNICA DO PLANO")
+                        .font(.caption.bold())
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                overallBadge(level: report.overallLevel)
+            }
+
+            // Veredito Clínico
+            Text(report.summaryVerdict)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+                .lineSpacing(2)
+
+            Divider()
+
+            // Comparativo de Macros (Calorias, Proteína, Carboidratos, Gordura)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                macroComplianceCard(metric: report.calories)
+                let gKgText = report.proteinGramsPerKg != nil ? String(format: "%.1f g/kg", report.proteinGramsPerKg!) : nil
+                macroComplianceCard(metric: report.protein, extraBadge: gKgText)
+                macroComplianceCard(metric: report.carbs)
+                macroComplianceCard(metric: report.fat)
+            }
+
+            // Alertas Dinâmicos (Déficit agressivo, superávits, remoção/adição de comida)
+            if !report.alerts.isEmpty {
+                VStack(spacing: 6) {
+                    ForEach(report.alerts) { alert in
+                        alertBannerView(alert: alert)
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(16)
+        .background(Color.appCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
+    }
+
+    private func overallBadge(level: ComplianceLevel) -> some View {
+        let (icon, color): (String, Color) = {
+            switch level {
+            case .optimal:
+                return ("checkmark.seal.fill", .green)
+            case .acceptable:
+                return ("checkmark.circle", .teal)
+            case .below, .above:
+                return ("exclamationmark.triangle.fill", .orange)
+            case .critical:
+                return ("xmark.octagon.fill", .red)
+            }
+        }()
+
+        return HStack(spacing: 4) {
+            Image(systemName: icon)
+            Text(level.rawValue)
+        }
+        .font(.caption2.bold())
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.15))
+        .foregroundColor(color)
+        .clipShape(Capsule())
+    }
+
+    private func complianceColor(for level: ComplianceLevel) -> Color {
+        switch level {
+        case .optimal: return .green
+        case .acceptable: return .blue
+        case .below, .above: return .orange
+        case .critical: return .red
+        }
+    }
+
+    private func macroComplianceCard(metric: MetricCompliance, extraBadge: String? = nil) -> some View {
+        let levelColor = complianceColor(for: metric.level)
+        let progress = min(1.5, max(0.0, metric.percentage / 100.0))
+
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(metric.name)
+                    .font(.caption.bold())
+                    .foregroundColor(.secondary)
+                Spacer()
+                if let extraBadge {
+                    Text(extraBadge)
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.blue.opacity(0.12))
+                        .foregroundColor(.blue)
+                        .clipShape(Capsule())
+                }
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                if metric.unit == "kcal" {
+                    Text("\(Int(metric.planned))")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.primary)
+                    Text("/ \(Int(metric.target)) \(metric.unit)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("\(Int(metric.planned))g")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.primary)
+                    Text("/ \(Int(metric.target))g")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            ProgressView(value: min(1.0, progress))
+                .tint(levelColor)
+                .scaleEffect(x: 1, y: 0.8, anchor: .center)
+
+            HStack {
+                Text(metric.formattedDelta)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(levelColor)
+                Spacer()
+                Text(String(format: "%.0f%%", metric.percentage))
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.appBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func alertBannerView(alert: PlanComplianceAlert) -> some View {
+        let (bgColor, fgColor, icon): (Color, Color, String) = {
+            switch alert.severity {
+            case .danger:
+                return (Color.red.opacity(0.12), Color.red, "xmark.octagon.fill")
+            case .warning:
+                return (Color.orange.opacity(0.12), Color.orange, "exclamationmark.triangle.fill")
+            case .info:
+                return (Color.blue.opacity(0.12), Color.blue, "info.circle.fill")
+            }
+        }()
+
+        return HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.caption.bold())
+                .foregroundColor(fgColor)
+                .padding(.top, 2)
+
+            Text(alert.message)
+                .font(.footnote)
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer()
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(bgColor)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private func mealCardView(meal: PlannedMeal) -> some View {

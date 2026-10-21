@@ -30,6 +30,7 @@
 		9924A86233E1B33BBDEBF1B1 /* ProfileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 220DF0251143AE307BE10795 /* ProfileStore.swift */; };
 		A13DB4135EA819400CECA6B0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46BEF6B2159841EBBD3F1BB7 /* OnboardingView.swift */; };
 		A67B60EB3ACDAC5A97884DD9 /* FoodItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2636A4FBAAF3BD648E344E27 /* FoodItem.swift */; };
+		AA8406E266036B220B87CB1A /* MealPlanComplianceEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 481604DF813BA343CA10025B /* MealPlanComplianceEvaluator.swift */; };
 		AEADE36E463993789DD0E8C1 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1206AFEEEE1FF017A865DD90 /* AppTheme.swift */; };
 		BA2CE3C5D12517B54C98C7F6 /* TBCAFoodDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AEC53AB8F04E805EF8B7D10 /* TBCAFoodDatabase.swift */; };
 		C91176CE704F8AFC9E5A2DA2 /* MealLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0967A0535BEC476C7129E7 /* MealLog.swift */; };
@@ -40,7 +41,6 @@
 		E676C9FDF1693519704FD4EF /* FoodLoggingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC321893D2AE27B08F761BA5 /* FoodLoggingView.swift */; };
 		EA5375BE9468F77DEA4C2088 /* NutritionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D44FA03F6339A3116D169B /* NutritionCalculator.swift */; };
 		EF383A07D95377651F46521D /* WaterStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FAC8D5FCD47ABC0E1AA0CF7 /* WaterStore.swift */; };
-		A411B2C3D4E5F67890123456 /* MealPlanComplianceEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B522C3D4E5F6789012345678 /* MealPlanComplianceEvaluator.swift */; };
 		F45DD9716AF3C54EE1AECDC9 /* MealPlanImportEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8645E3B0497BD5CD4DAC9DFB /* MealPlanImportEngine.swift */; };
 		F4ADE674DAF3158D15D48490 /* MealParserEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20377FF701309AADE0CD7B43 /* MealParserEngine.swift */; };
 /* End PBXBuildFile section */
@@ -61,13 +61,13 @@
 		3DB0B8C69EC3F70B6B0E21C1 /* FoodSubstitutionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodSubstitutionEngine.swift; sourceTree = "<group>"; };
 		3F925E38527D516FD6696BAE /* MealPlanGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanGenerator.swift; sourceTree = "<group>"; };
 		46BEF6B2159841EBBD3F1BB7 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		481604DF813BA343CA10025B /* MealPlanComplianceEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanComplianceEvaluator.swift; sourceTree = "<group>"; };
 		4BB090A702E8772CEB926B55 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		6521F2E0F35B5DCFE9EC2F1A /* MealPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanView.swift; sourceTree = "<group>"; };
 		6794148A21436C4483AB9606 /* NutriPilot.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NutriPilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6FAC8D5FCD47ABC0E1AA0CF7 /* WaterStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterStore.swift; sourceTree = "<group>"; };
 		70D1B5BEDED968B1CD167E71 /* ReportExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportExportView.swift; sourceTree = "<group>"; };
 		7C8ABAE5AD21302E7C591554 /* BodyProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyProgressView.swift; sourceTree = "<group>"; };
-		B522C3D4E5F6789012345678 /* MealPlanComplianceEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanComplianceEvaluator.swift; sourceTree = "<group>"; };
 		8645E3B0497BD5CD4DAC9DFB /* MealPlanImportEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanImportEngine.swift; sourceTree = "<group>"; };
 		8F8DD1D7ACB41748727A9C3A /* BodyCompositionCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyCompositionCalculator.swift; sourceTree = "<group>"; };
 		9C801680CAB2E442D0F2A83C /* FoodSearchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodSearchEngine.swift; sourceTree = "<group>"; };
@@ -153,7 +153,7 @@
 		67D932FB828398AFF26A1223 /* MealPlan */ = {
 			isa = PBXGroup;
 			children = (
-				B522C3D4E5F6789012345678 /* MealPlanComplianceEvaluator.swift */,
+				481604DF813BA343CA10025B /* MealPlanComplianceEvaluator.swift */,
 				8645E3B0497BD5CD4DAC9DFB /* MealPlanImportEngine.swift */,
 			);
 			path = MealPlan;
@@ -301,7 +301,7 @@
 				C91176CE704F8AFC9E5A2DA2 /* MealLog.swift in Sources */,
 				839A478B809BC801D3CFBFFF /* MealParserConfirmationSheet.swift in Sources */,
 				F4ADE674DAF3158D15D48490 /* MealParserEngine.swift in Sources */,
-				A411B2C3D4E5F67890123456 /* MealPlanComplianceEvaluator.swift in Sources */,
+				AA8406E266036B220B87CB1A /* MealPlanComplianceEvaluator.swift in Sources */,
 				0CCDD1EE5048633E99E431EF /* MealPlanGenerator.swift in Sources */,
 				F45DD9716AF3C54EE1AECDC9 /* MealPlanImportEngine.swift in Sources */,
 				3CBDC482E860A56821A67DD2 /* MealPlanStore.swift in Sources */,
