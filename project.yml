@@ -1,0 +1,21 @@
+name: NutriPilot
+options:
+  bundleIdPrefix: com.jotape
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  SWIFT_VERSION: "5.9"
+  GENERATE_INFOPLIST_FILE: YES
+  PRODUCT_BUNDLE_IDENTIFIER: com.jotape.NutriPilot
+targets:
+  NutriPilot:
+    type: application
+    platform: iOS
+    sources:
+      - Sources/NutriPilotCore
+      - Sources/NutriPilotApp
+      - App
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.jotape.NutriPilot
+      INFOPLIST_KEY_UILaunchScreen_Generation: YES
+      INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait

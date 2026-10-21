@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(NutriPilotCore)
 import NutriPilotCore
+#endif
 #if canImport(UIKit)
 import UIKit
 #elseif canImport(AppKit)

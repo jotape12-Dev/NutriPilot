@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(NutriPilotCore)
 import NutriPilotCore
+#endif
 
 public struct WaterView: View {
     public var targetWaterMl: Double

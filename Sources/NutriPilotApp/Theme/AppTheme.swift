@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(NutriPilotCore)
+import NutriPilotCore
+#endif
 
 public extension Color {
     static var appBackground: Color {
@@ -29,12 +32,5 @@ public extension Color {
         #else
         return Color.gray.opacity(0.15)
         #endif
-    }
-}
-
-public extension Double {
-    func rounded(to places: Int) -> Double {
-        let divisor = pow(10.0, Double(places))
-        return (self * divisor).rounded() / divisor
     }
 }

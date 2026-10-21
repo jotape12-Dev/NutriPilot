@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(NutriPilotCore)
 import NutriPilotCore
+#endif
 #if canImport(Charts)
 import Charts
 #endif

@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(NutriPilotCore)
 import NutriPilotCore
+#endif
 
 public struct RootView: View {
     @State private var store = ProfileStore.shared

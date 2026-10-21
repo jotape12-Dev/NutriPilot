@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(NutriPilotCore)
 import NutriPilotCore
+#endif
 
 public struct MealPlanView: View {
     public var targetCalories: Double

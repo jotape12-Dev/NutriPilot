@@ -1,0 +1,480 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0CCDD1EE5048633E99E431EF /* MealPlanGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F925E38527D516FD6696BAE /* MealPlanGenerator.swift */; };
+		0D4EE13EC322DF3E4AA912B9 /* NutritionTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D3809FDDE9B5D84817CA80 /* NutritionTarget.swift */; };
+		2A81951E2C16C067BCE1128C /* FoodSearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C801680CAB2E442D0F2A83C /* FoodSearchEngine.swift */; };
+		3A9A518982632C0A7C059916 /* MealPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6521F2E0F35B5DCFE9EC2F1A /* MealPlanView.swift */; };
+		3C2C08B984ADF7E0622A9B29 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E1CD691C4D69A224C74EF5F /* RootView.swift */; };
+		3CBDC482E860A56821A67DD2 /* MealPlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2840C6CED943C36889997ABF /* MealPlanStore.swift */; };
+		4B5A8F271123B304CE0B2322 /* SuccinctAssistantEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B944CABA28157842B7D9FE /* SuccinctAssistantEngine.swift */; };
+		651C9C679BBB5E65C807FE4D /* NutriPilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A67B48114E0DFF68CFA066FC /* NutriPilotApp.swift */; };
+		6D1919BD008C19CF528EE968 /* BodyMeasurementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A84FF0AF37BA564900349A /* BodyMeasurementStore.swift */; };
+		6D86F65ABEF3B5CABE2EDE3D /* WeightTrendCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAF790A5472B13338ADB4678 /* WeightTrendCalculator.swift */; };
+		7A06FD322FAF9863DB9E7CCC /* WaterLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0513E44A3B68CD94BF672A55 /* WaterLog.swift */; };
+		83321D741A7144FC6DE65B56 /* ReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B3E96CF132828B7C3A7E11 /* ReportExporter.swift */; };
+		839A478B809BC801D3CFBFFF /* MealParserConfirmationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EA1B77A7287CC3A39222A65 /* MealParserConfirmationSheet.swift */; };
+		8EACB1CD6A6FFE7180B55F0C /* BodyProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C8ABAE5AD21302E7C591554 /* BodyProgressView.swift */; };
+		91DCDF6E218CF36E8E01D14E /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB090A702E8772CEB926B55 /* DashboardView.swift */; };
+		93B469029C3A2614356BF889 /* BodyCompositionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F8DD1D7ACB41748727A9C3A /* BodyCompositionCalculator.swift */; };
+		95032D62C543E396B3EB6E74 /* BodyMeasurement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D546E8C2E0AF4BE6A7E5EF7A /* BodyMeasurement.swift */; };
+		9637EE952582C6C66BD7B1EF /* FoodSubstitutionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DB0B8C69EC3F70B6B0E21C1 /* FoodSubstitutionEngine.swift */; };
+		97A5FEF08D91ABC97491144B /* MealStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D57760672199AED9BF882D0D /* MealStore.swift */; };
+		9924A86233E1B33BBDEBF1B1 /* ProfileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 220DF0251143AE307BE10795 /* ProfileStore.swift */; };
+		A13DB4135EA819400CECA6B0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46BEF6B2159841EBBD3F1BB7 /* OnboardingView.swift */; };
+		A67B60EB3ACDAC5A97884DD9 /* FoodItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2636A4FBAAF3BD648E344E27 /* FoodItem.swift */; };
+		AEADE36E463993789DD0E8C1 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1206AFEEEE1FF017A865DD90 /* AppTheme.swift */; };
+		BA2CE3C5D12517B54C98C7F6 /* TBCAFoodDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AEC53AB8F04E805EF8B7D10 /* TBCAFoodDatabase.swift */; };
+		C91176CE704F8AFC9E5A2DA2 /* MealLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0967A0535BEC476C7129E7 /* MealLog.swift */; };
+		D2895828707211FE560421AE /* WaterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB04DDE1C86C5E06957C109 /* WaterView.swift */; };
+		D507268D3D3491026F23D8EF /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A582E9E1A7BCF4656D1CC348 /* UserProfile.swift */; };
+		D6F493404572C5FE52969D4F /* GroceryListGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A09D1652467E57A5D2108C /* GroceryListGenerator.swift */; };
+		E21BA5340201BB5D9D96FD86 /* ReportExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D1B5BEDED968B1CD167E71 /* ReportExportView.swift */; };
+		E676C9FDF1693519704FD4EF /* FoodLoggingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC321893D2AE27B08F761BA5 /* FoodLoggingView.swift */; };
+		EA5375BE9468F77DEA4C2088 /* NutritionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D44FA03F6339A3116D169B /* NutritionCalculator.swift */; };
+		EF383A07D95377651F46521D /* WaterStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FAC8D5FCD47ABC0E1AA0CF7 /* WaterStore.swift */; };
+		F4ADE674DAF3158D15D48490 /* MealParserEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20377FF701309AADE0CD7B43 /* MealParserEngine.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0513E44A3B68CD94BF672A55 /* WaterLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterLog.swift; sourceTree = "<group>"; };
+		05D3809FDDE9B5D84817CA80 /* NutritionTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionTarget.swift; sourceTree = "<group>"; };
+		06B3E96CF132828B7C3A7E11 /* ReportExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportExporter.swift; sourceTree = "<group>"; };
+		1206AFEEEE1FF017A865DD90 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		1A0967A0535BEC476C7129E7 /* MealLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealLog.swift; sourceTree = "<group>"; };
+		20377FF701309AADE0CD7B43 /* MealParserEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealParserEngine.swift; sourceTree = "<group>"; };
+		220DF0251143AE307BE10795 /* ProfileStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStore.swift; sourceTree = "<group>"; };
+		2636A4FBAAF3BD648E344E27 /* FoodItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodItem.swift; sourceTree = "<group>"; };
+		2840C6CED943C36889997ABF /* MealPlanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanStore.swift; sourceTree = "<group>"; };
+		2AEC53AB8F04E805EF8B7D10 /* TBCAFoodDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TBCAFoodDatabase.swift; sourceTree = "<group>"; };
+		2EA1B77A7287CC3A39222A65 /* MealParserConfirmationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealParserConfirmationSheet.swift; sourceTree = "<group>"; };
+		33D44FA03F6339A3116D169B /* NutritionCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionCalculator.swift; sourceTree = "<group>"; };
+		3DB0B8C69EC3F70B6B0E21C1 /* FoodSubstitutionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodSubstitutionEngine.swift; sourceTree = "<group>"; };
+		3F925E38527D516FD6696BAE /* MealPlanGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanGenerator.swift; sourceTree = "<group>"; };
+		46BEF6B2159841EBBD3F1BB7 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		4BB090A702E8772CEB926B55 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		6521F2E0F35B5DCFE9EC2F1A /* MealPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanView.swift; sourceTree = "<group>"; };
+		6794148A21436C4483AB9606 /* NutriPilot.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NutriPilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6FAC8D5FCD47ABC0E1AA0CF7 /* WaterStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterStore.swift; sourceTree = "<group>"; };
+		70D1B5BEDED968B1CD167E71 /* ReportExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportExportView.swift; sourceTree = "<group>"; };
+		7C8ABAE5AD21302E7C591554 /* BodyProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyProgressView.swift; sourceTree = "<group>"; };
+		8F8DD1D7ACB41748727A9C3A /* BodyCompositionCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyCompositionCalculator.swift; sourceTree = "<group>"; };
+		9C801680CAB2E442D0F2A83C /* FoodSearchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodSearchEngine.swift; sourceTree = "<group>"; };
+		9E1CD691C4D69A224C74EF5F /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		A582E9E1A7BCF4656D1CC348 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
+		A67B48114E0DFF68CFA066FC /* NutriPilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutriPilotApp.swift; sourceTree = "<group>"; };
+		CFB04DDE1C86C5E06957C109 /* WaterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterView.swift; sourceTree = "<group>"; };
+		D0A09D1652467E57A5D2108C /* GroceryListGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroceryListGenerator.swift; sourceTree = "<group>"; };
+		D1B944CABA28157842B7D9FE /* SuccinctAssistantEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuccinctAssistantEngine.swift; sourceTree = "<group>"; };
+		D546E8C2E0AF4BE6A7E5EF7A /* BodyMeasurement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyMeasurement.swift; sourceTree = "<group>"; };
+		D57760672199AED9BF882D0D /* MealStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealStore.swift; sourceTree = "<group>"; };
+		D5A84FF0AF37BA564900349A /* BodyMeasurementStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyMeasurementStore.swift; sourceTree = "<group>"; };
+		DAF790A5472B13338ADB4678 /* WeightTrendCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightTrendCalculator.swift; sourceTree = "<group>"; };
+		EC321893D2AE27B08F761BA5 /* FoodLoggingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodLoggingView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		06863CAF7F89ADB44289009E /* NutriPilotApp */ = {
+			isa = PBXGroup;
+			children = (
+				7C8ABAE5AD21302E7C591554 /* BodyProgressView.swift */,
+				4BB090A702E8772CEB926B55 /* DashboardView.swift */,
+				EC321893D2AE27B08F761BA5 /* FoodLoggingView.swift */,
+				2EA1B77A7287CC3A39222A65 /* MealParserConfirmationSheet.swift */,
+				6521F2E0F35B5DCFE9EC2F1A /* MealPlanView.swift */,
+				46BEF6B2159841EBBD3F1BB7 /* OnboardingView.swift */,
+				70D1B5BEDED968B1CD167E71 /* ReportExportView.swift */,
+				9E1CD691C4D69A224C74EF5F /* RootView.swift */,
+				CFB04DDE1C86C5E06957C109 /* WaterView.swift */,
+				CE0FCF6905E78609943B4EF1 /* Theme */,
+			);
+			name = NutriPilotApp;
+			path = Sources/NutriPilotApp;
+			sourceTree = "<group>";
+		};
+		11640D345FFEE0C2898C4663 /* Export */ = {
+			isa = PBXGroup;
+			children = (
+				06B3E96CF132828B7C3A7E11 /* ReportExporter.swift */,
+			);
+			path = Export;
+			sourceTree = "<group>";
+		};
+		173B4112C8713295D91CCBB7 /* Seed */ = {
+			isa = PBXGroup;
+			children = (
+				2AEC53AB8F04E805EF8B7D10 /* TBCAFoodDatabase.swift */,
+			);
+			path = Seed;
+			sourceTree = "<group>";
+		};
+		378CBAE300BDC5DBD44BC4D0 = {
+			isa = PBXGroup;
+			children = (
+				D42ACF43FBC27FA8158C6B87 /* App */,
+				06863CAF7F89ADB44289009E /* NutriPilotApp */,
+				C4BF06BA981A9D633A9F7347 /* NutriPilotCore */,
+				CD48FC0AEE290B27763DBCF4 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4F35E51606C3F79EA1515ECB /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				D5A84FF0AF37BA564900349A /* BodyMeasurementStore.swift */,
+				2840C6CED943C36889997ABF /* MealPlanStore.swift */,
+				D57760672199AED9BF882D0D /* MealStore.swift */,
+				220DF0251143AE307BE10795 /* ProfileStore.swift */,
+				6FAC8D5FCD47ABC0E1AA0CF7 /* WaterStore.swift */,
+			);
+			path = Storage;
+			sourceTree = "<group>";
+		};
+		C4BF06BA981A9D633A9F7347 /* NutriPilotCore */ = {
+			isa = PBXGroup;
+			children = (
+				11640D345FFEE0C2898C4663 /* Export */,
+				F68138B08F7909DA02DDC073 /* Models */,
+				DFD0179C41BC9FCD4EFD35F9 /* Nutrition */,
+				173B4112C8713295D91CCBB7 /* Seed */,
+				4F35E51606C3F79EA1515ECB /* Storage */,
+			);
+			name = NutriPilotCore;
+			path = Sources/NutriPilotCore;
+			sourceTree = "<group>";
+		};
+		CD48FC0AEE290B27763DBCF4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6794148A21436C4483AB9606 /* NutriPilot.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CE0FCF6905E78609943B4EF1 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				1206AFEEEE1FF017A865DD90 /* AppTheme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		D42ACF43FBC27FA8158C6B87 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A67B48114E0DFF68CFA066FC /* NutriPilotApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		DFD0179C41BC9FCD4EFD35F9 /* Nutrition */ = {
+			isa = PBXGroup;
+			children = (
+				8F8DD1D7ACB41748727A9C3A /* BodyCompositionCalculator.swift */,
+				9C801680CAB2E442D0F2A83C /* FoodSearchEngine.swift */,
+				3DB0B8C69EC3F70B6B0E21C1 /* FoodSubstitutionEngine.swift */,
+				D0A09D1652467E57A5D2108C /* GroceryListGenerator.swift */,
+				20377FF701309AADE0CD7B43 /* MealParserEngine.swift */,
+				3F925E38527D516FD6696BAE /* MealPlanGenerator.swift */,
+				33D44FA03F6339A3116D169B /* NutritionCalculator.swift */,
+				D1B944CABA28157842B7D9FE /* SuccinctAssistantEngine.swift */,
+				DAF790A5472B13338ADB4678 /* WeightTrendCalculator.swift */,
+			);
+			path = Nutrition;
+			sourceTree = "<group>";
+		};
+		F68138B08F7909DA02DDC073 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				D546E8C2E0AF4BE6A7E5EF7A /* BodyMeasurement.swift */,
+				2636A4FBAAF3BD648E344E27 /* FoodItem.swift */,
+				1A0967A0535BEC476C7129E7 /* MealLog.swift */,
+				05D3809FDDE9B5D84817CA80 /* NutritionTarget.swift */,
+				A582E9E1A7BCF4656D1CC348 /* UserProfile.swift */,
+				0513E44A3B68CD94BF672A55 /* WaterLog.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		08D7FDEEC66943011CE1AAF6 /* NutriPilot */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D1441B15A4D5302F17621120 /* Build configuration list for PBXNativeTarget "NutriPilot" */;
+			buildPhases = (
+				0EEC530D7403A6E745544021 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NutriPilot;
+			packageProductDependencies = (
+			);
+			productName = NutriPilot;
+			productReference = 6794148A21436C4483AB9606 /* NutriPilot.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0EE3DB613E58107E13EC1020 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = A9E46987719AED3AD38A0854 /* Build configuration list for PBXProject "NutriPilot" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 378CBAE300BDC5DBD44BC4D0;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = CD48FC0AEE290B27763DBCF4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				08D7FDEEC66943011CE1AAF6 /* NutriPilot */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0EEC530D7403A6E745544021 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AEADE36E463993789DD0E8C1 /* AppTheme.swift in Sources */,
+				93B469029C3A2614356BF889 /* BodyCompositionCalculator.swift in Sources */,
+				95032D62C543E396B3EB6E74 /* BodyMeasurement.swift in Sources */,
+				6D1919BD008C19CF528EE968 /* BodyMeasurementStore.swift in Sources */,
+				8EACB1CD6A6FFE7180B55F0C /* BodyProgressView.swift in Sources */,
+				91DCDF6E218CF36E8E01D14E /* DashboardView.swift in Sources */,
+				A67B60EB3ACDAC5A97884DD9 /* FoodItem.swift in Sources */,
+				E676C9FDF1693519704FD4EF /* FoodLoggingView.swift in Sources */,
+				2A81951E2C16C067BCE1128C /* FoodSearchEngine.swift in Sources */,
+				9637EE952582C6C66BD7B1EF /* FoodSubstitutionEngine.swift in Sources */,
+				D6F493404572C5FE52969D4F /* GroceryListGenerator.swift in Sources */,
+				C91176CE704F8AFC9E5A2DA2 /* MealLog.swift in Sources */,
+				839A478B809BC801D3CFBFFF /* MealParserConfirmationSheet.swift in Sources */,
+				F4ADE674DAF3158D15D48490 /* MealParserEngine.swift in Sources */,
+				0CCDD1EE5048633E99E431EF /* MealPlanGenerator.swift in Sources */,
+				3CBDC482E860A56821A67DD2 /* MealPlanStore.swift in Sources */,
+				3A9A518982632C0A7C059916 /* MealPlanView.swift in Sources */,
+				97A5FEF08D91ABC97491144B /* MealStore.swift in Sources */,
+				651C9C679BBB5E65C807FE4D /* NutriPilotApp.swift in Sources */,
+				EA5375BE9468F77DEA4C2088 /* NutritionCalculator.swift in Sources */,
+				0D4EE13EC322DF3E4AA912B9 /* NutritionTarget.swift in Sources */,
+				A13DB4135EA819400CECA6B0 /* OnboardingView.swift in Sources */,
+				9924A86233E1B33BBDEBF1B1 /* ProfileStore.swift in Sources */,
+				E21BA5340201BB5D9D96FD86 /* ReportExportView.swift in Sources */,
+				83321D741A7144FC6DE65B56 /* ReportExporter.swift in Sources */,
+				3C2C08B984ADF7E0622A9B29 /* RootView.swift in Sources */,
+				4B5A8F271123B304CE0B2322 /* SuccinctAssistantEngine.swift in Sources */,
+				BA2CE3C5D12517B54C98C7F6 /* TBCAFoodDatabase.swift in Sources */,
+				D507268D3D3491026F23D8EF /* UserProfile.swift in Sources */,
+				7A06FD322FAF9863DB9E7CCC /* WaterLog.swift in Sources */,
+				EF383A07D95377651F46521D /* WaterStore.swift in Sources */,
+				D2895828707211FE560421AE /* WaterView.swift in Sources */,
+				6D86F65ABEF3B5CABE2EDE3D /* WeightTrendCalculator.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		17DF2942590A37E61F2C47A0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jotape.NutriPilot;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		3AC53FFEA75B93C029B19CF7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jotape.NutriPilot;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		CBF8791E73C060CD95FD5C2A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jotape.NutriPilot;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E0E3BAC44B25BD764D7233BF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jotape.NutriPilot;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A9E46987719AED3AD38A0854 /* Build configuration list for PBXProject "NutriPilot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				17DF2942590A37E61F2C47A0 /* Debug */,
+				3AC53FFEA75B93C029B19CF7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D1441B15A4D5302F17621120 /* Build configuration list for PBXNativeTarget "NutriPilot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CBF8791E73C060CD95FD5C2A /* Debug */,
+				E0E3BAC44B25BD764D7233BF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0EE3DB613E58107E13EC1020 /* Project object */;
+}

@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(NutriPilotCore)
 import NutriPilotCore
+#endif
 
 public struct MealParserConfirmationSheet: View {
     @Environment(\.dismiss) private var dismiss
