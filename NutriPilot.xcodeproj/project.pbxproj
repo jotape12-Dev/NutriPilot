@@ -41,6 +41,7 @@
 		E676C9FDF1693519704FD4EF /* FoodLoggingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC321893D2AE27B08F761BA5 /* FoodLoggingView.swift */; };
 		EA5375BE9468F77DEA4C2088 /* NutritionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D44FA03F6339A3116D169B /* NutritionCalculator.swift */; };
 		EF383A07D95377651F46521D /* WaterStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FAC8D5FCD47ABC0E1AA0CF7 /* WaterStore.swift */; };
+		E8A246B1893C5F1A2D0E7C3B /* MealPlanAdjustmentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79B35A0782B4E091C6F8E2A /* MealPlanAdjustmentEngine.swift */; };
 		F45DD9716AF3C54EE1AECDC9 /* MealPlanImportEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8645E3B0497BD5CD4DAC9DFB /* MealPlanImportEngine.swift */; };
 		F4ADE674DAF3158D15D48490 /* MealParserEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20377FF701309AADE0CD7B43 /* MealParserEngine.swift */; };
 /* End PBXBuildFile section */
@@ -68,6 +69,7 @@
 		6FAC8D5FCD47ABC0E1AA0CF7 /* WaterStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterStore.swift; sourceTree = "<group>"; };
 		70D1B5BEDED968B1CD167E71 /* ReportExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportExportView.swift; sourceTree = "<group>"; };
 		7C8ABAE5AD21302E7C591554 /* BodyProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyProgressView.swift; sourceTree = "<group>"; };
+		D79B35A0782B4E091C6F8E2A /* MealPlanAdjustmentEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanAdjustmentEngine.swift; sourceTree = "<group>"; };
 		8645E3B0497BD5CD4DAC9DFB /* MealPlanImportEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanImportEngine.swift; sourceTree = "<group>"; };
 		8F8DD1D7ACB41748727A9C3A /* BodyCompositionCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyCompositionCalculator.swift; sourceTree = "<group>"; };
 		9C801680CAB2E442D0F2A83C /* FoodSearchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodSearchEngine.swift; sourceTree = "<group>"; };
@@ -153,6 +155,7 @@
 		67D932FB828398AFF26A1223 /* MealPlan */ = {
 			isa = PBXGroup;
 			children = (
+				D79B35A0782B4E091C6F8E2A /* MealPlanAdjustmentEngine.swift */,
 				481604DF813BA343CA10025B /* MealPlanComplianceEvaluator.swift */,
 				8645E3B0497BD5CD4DAC9DFB /* MealPlanImportEngine.swift */,
 			);
@@ -302,6 +305,7 @@
 				839A478B809BC801D3CFBFFF /* MealParserConfirmationSheet.swift in Sources */,
 				F4ADE674DAF3158D15D48490 /* MealParserEngine.swift in Sources */,
 				AA8406E266036B220B87CB1A /* MealPlanComplianceEvaluator.swift in Sources */,
+				E8A246B1893C5F1A2D0E7C3B /* MealPlanAdjustmentEngine.swift in Sources */,
 				0CCDD1EE5048633E99E431EF /* MealPlanGenerator.swift in Sources */,
 				F45DD9716AF3C54EE1AECDC9 /* MealPlanImportEngine.swift in Sources */,
 				3CBDC482E860A56821A67DD2 /* MealPlanStore.swift in Sources */,

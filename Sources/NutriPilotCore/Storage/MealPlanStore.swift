@@ -126,6 +126,131 @@ public final class MealPlanStore: @unchecked Sendable {
         setActivePlan(updatedPlan)
     }
 
+    public func updateItemAmount(mealId: UUID, itemId: UUID, newAmount: Double) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let plan = activePlan else { return }
+        var updatedMeals = plan.meals
+        guard let mealIdx = updatedMeals.firstIndex(where: { $0.id == mealId }) else { return }
+        var updatedItems = updatedMeals[mealIdx].items
+        guard let itemIdx = updatedItems.firstIndex(where: { $0.id == itemId }) else { return }
+
+        let oldItem = updatedItems[itemIdx]
+        let validAmount = max(1.0, newAmount.rounded(to: 1))
+        let calc = oldItem.food.calculatedFor(amount: validAmount)
+
+        updatedItems[itemIdx] = PlannedMealItem(
+            id: oldItem.id,
+            food: oldItem.food,
+            amount: validAmount,
+            unit: oldItem.unit,
+            portionName: oldItem.portionName,
+            calories: calc.calories,
+            proteinGrams: calc.protein,
+            carbsGrams: calc.carbs,
+            fatGrams: calc.fat,
+            fiberGrams: calc.fiber
+        )
+
+        let oldMeal = updatedMeals[mealIdx]
+        updatedMeals[mealIdx] = PlannedMeal(
+            id: oldMeal.id,
+            mealType: oldMeal.mealType,
+            name: oldMeal.name,
+            suggestedTime: oldMeal.suggestedTime,
+            targetCalories: oldMeal.targetCalories,
+            items: updatedItems
+        )
+
+        let updatedPlan = DailyMealPlan(
+            id: plan.id,
+            createdAt: plan.createdAt,
+            targetCalories: plan.targetCalories,
+            targetProteinGrams: plan.targetProteinGrams,
+            targetCarbsGrams: plan.targetCarbsGrams,
+            targetFatGrams: plan.targetFatGrams,
+            targetFiberGrams: plan.targetFiberGrams,
+            meals: updatedMeals
+        )
+        setActivePlan(updatedPlan)
+    }
+
+    public func addItem(toMealId: UUID, item: PlannedMealItem) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let plan = activePlan else { return }
+        var updatedMeals = plan.meals
+        guard let mealIdx = updatedMeals.firstIndex(where: { $0.id == toMealId }) else { return }
+        var updatedItems = updatedMeals[mealIdx].items
+        updatedItems.append(item)
+
+        let oldMeal = updatedMeals[mealIdx]
+        updatedMeals[mealIdx] = PlannedMeal(
+            id: oldMeal.id,
+            mealType: oldMeal.mealType,
+            name: oldMeal.name,
+            suggestedTime: oldMeal.suggestedTime,
+            targetCalories: oldMeal.targetCalories,
+            items: updatedItems
+        )
+
+        let updatedPlan = DailyMealPlan(
+            id: plan.id,
+            createdAt: plan.createdAt,
+            targetCalories: plan.targetCalories,
+            targetProteinGrams: plan.targetProteinGrams,
+            targetCarbsGrams: plan.targetCarbsGrams,
+            targetFatGrams: plan.targetFatGrams,
+            targetFiberGrams: plan.targetFiberGrams,
+            meals: updatedMeals
+        )
+        setActivePlan(updatedPlan)
+    }
+
+    public func removeItem(fromMealId: UUID, itemId: UUID) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let plan = activePlan else { return }
+        var updatedMeals = plan.meals
+        guard let mealIdx = updatedMeals.firstIndex(where: { $0.id == fromMealId }) else { return }
+        var updatedItems = updatedMeals[mealIdx].items
+        updatedItems.removeAll(where: { $0.id == itemId })
+
+        let oldMeal = updatedMeals[mealIdx]
+        updatedMeals[mealIdx] = PlannedMeal(
+            id: oldMeal.id,
+            mealType: oldMeal.mealType,
+            name: oldMeal.name,
+            suggestedTime: oldMeal.suggestedTime,
+            targetCalories: oldMeal.targetCalories,
+            items: updatedItems
+        )
+
+        let updatedPlan = DailyMealPlan(
+            id: plan.id,
+            createdAt: plan.createdAt,
+            targetCalories: plan.targetCalories,
+            targetProteinGrams: plan.targetProteinGrams,
+            targetCarbsGrams: plan.targetCarbsGrams,
+            targetFatGrams: plan.targetFatGrams,
+            targetFiberGrams: plan.targetFiberGrams,
+            meals: updatedMeals
+        )
+        setActivePlan(updatedPlan)
+    }
+
+    public func applyAdjustment(_ suggestion: PlanAdjustmentSuggestion) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let plan = activePlan else { return }
+        let updatedPlan = MealPlanAdjustmentEngine.apply(suggestion: suggestion, to: plan)
+        setActivePlan(updatedPlan)
+    }
+
     public func clear() {
         lock.lock()
         defer { lock.unlock() }
