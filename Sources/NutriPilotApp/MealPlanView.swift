@@ -101,7 +101,7 @@ public struct MealPlanView: View {
                 }
             }
             .sheet(item: $itemToSubstitute) { target in
-                FoodSubstitutionSheet(target: target) { newItem in
+                FoodSubstitutionSheet(target: target, planStore: planStore) { newItem in
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                         planStore.replaceItem(mealId: target.mealId, oldItemId: target.item.id, with: newItem)
                         hapticTrigger += 1
@@ -152,6 +152,16 @@ public struct MealPlanView: View {
             target: target,
             goal: goal,
             currentWeightKg: weight
+        )
+    }
+
+    private var planAdjustmentSuggestions: [PlanAdjustmentSuggestion] {
+        guard let plan = planStore.activePlan else { return [] }
+        return MealPlanAdjustmentEngine.generateSuggestions(
+            plan: plan,
+            target: currentEffectiveTarget,
+            goal: profileStore.currentProfile?.goal,
+            currentWeightKg: profileStore.currentProfile?.currentWeightKg
         )
     }
 
@@ -378,11 +388,81 @@ public struct MealPlanView: View {
                 }
                 .padding(.top, 2)
             }
+
+            // Sugestões Clínicas de Ajuste para Bater a Meta
+            let suggestions = planAdjustmentSuggestions
+            if !suggestions.isEmpty {
+                Divider()
+                    .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .foregroundColor(.green)
+                            .font(.caption.bold())
+                        Text("SUGESTÕES DE AJUSTE PARA BATER A META")
+                            .font(.caption.bold())
+                            .foregroundColor(.green)
+                    }
+
+                    ForEach(suggestions) { suggestion in
+                        adjustmentSuggestionCard(suggestion: suggestion)
+                    }
+                }
+                .padding(.top, 2)
+            }
         }
         .padding(16)
         .background(Color.appCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
+    }
+
+    private func adjustmentSuggestionCard(suggestion: PlanAdjustmentSuggestion) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(suggestion.title)
+                        .font(.subheadline.bold())
+                        .foregroundColor(.primary)
+
+                    Text(suggestion.explanation)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                Text(suggestion.badgeLabel)
+                    .font(.caption2.bold())
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.green.opacity(0.15))
+                    .foregroundColor(.green)
+                    .clipShape(Capsule())
+            }
+
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    planStore.applyAdjustment(suggestion)
+                    hapticTrigger += 1
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle.fill")
+                    Text(suggestion.buttonLabel)
+                }
+                .font(.footnote.bold())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+        }
+        .padding(12)
+        .background(Color.appBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private func overallBadge(level: ComplianceLevel) -> some View {
@@ -552,8 +632,8 @@ public struct MealPlanView: View {
                             hapticTrigger += 1
                         } label: {
                             HStack(spacing: 4) {
-                                Image(systemName: "arrow.2.squarepath")
-                                Text("Substituir")
+                                Image(systemName: "slider.horizontal.3")
+                                Text("Ajustar / Substituir")
                             }
                             .font(.caption.bold())
                             .foregroundColor(.green)
@@ -981,164 +1061,66 @@ public struct SubstitutionTarget: Identifiable, Sendable {
     }
 }
 
-// MARK: - Sheet de Substituição Equivalente (Dietbox / Avanutri Style)
+// MARK: - Sheet de Substituição e Controle Granular de Porções
 
 private struct FoodSubstitutionSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let target: SubstitutionTarget
+    let planStore: MealPlanStore
     let onConfirm: (PlannedMealItem) -> Void
 
+    private enum SheetMode: String, CaseIterable, Identifiable {
+        case adjustPortion = "Ajustar Porção"
+        case substitute = "Substituir Alimento"
+
+        var id: String { rawValue }
+    }
+
+    @State private var mode: SheetMode = .adjustPortion
+    @State private var currentGrams: Double
     @State private var selectedIndex: Int = 0
+    @State private var substituteGrams: Double = 0.0
     @State private var substitutes: [SubstitutionResult] = []
+
+    init(
+        target: SubstitutionTarget,
+        planStore: MealPlanStore = .shared,
+        onConfirm: @escaping (PlannedMealItem) -> Void
+    ) {
+        self.target = target
+        self.planStore = planStore
+        self.onConfirm = onConfirm
+        self._currentGrams = State(initialValue: target.item.amount)
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 18) {
-                    // Item Original
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("ALIMENTO ORIGINAL NO PLANO")
-                            .font(.caption.bold())
-                            .foregroundColor(.secondary)
-
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(target.item.food.name)
-                                    .font(.headline)
-                                let desc = target.item.portionName ?? "\(Int(target.item.amount)) \(target.item.unit)"
-                                Text("\(desc) (\(Int(target.item.amount))g)")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text("\(Int(target.item.calories)) kcal")
-                                    .font(.headline)
-                                    .foregroundColor(.orange)
-                                Text("P: \(Int(target.item.proteinGrams))g | C: \(Int(target.item.carbsGrams))g | G: \(Int(target.item.fatGrams))g")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
+                VStack(spacing: 16) {
+                    // Picker de Segmento no topo
+                    Picker("Ação", selection: $mode) {
+                        ForEach(SheetMode.allCases) { m in
+                            Text(m.rawValue).tag(m)
                         }
                     }
-                    .padding(14)
-                    .background(Color.appCardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
 
-                    // Equivalências Calculadas pelo FoodSubstitutionEngine da TBCA
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Text("SUBSTITUTOS EQUIVALENTES CALCULADOS")
-                                .font(.caption.bold())
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            if let first = substitutes.first {
-                                Text(first.group.anchorMacroDescription)
-                                    .font(.caption2.bold())
-                                    .foregroundColor(.green)
-                            }
-                        }
-
-                        if substitutes.isEmpty {
-                            VStack(spacing: 8) {
-                                Text("Nenhum substituto exato do mesmo grupo nutricional encontrado na TBCA.")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.appCardBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        } else {
-                            VStack(spacing: 8) {
-                                ForEach(substitutes.indices, id: \.self) { idx in
-                                    let sub = substitutes[idx]
-                                    Button {
-                                        selectedIndex = idx
-                                    } label: {
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(sub.substituteFood.name)
-                                                    .font(.subheadline.bold())
-                                                    .foregroundColor(.primary)
-                                                let pText = sub.suggestedPortion ?? "\(Int(sub.equivalentAmount)) \(sub.unit)"
-                                                Text("\(pText) (\(Int(sub.equivalentAmount))g)")
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
-
-                                            Spacer()
-
-                                            VStack(alignment: .trailing, spacing: 2) {
-                                                Text("\(Int(sub.substituteCalories)) kcal")
-                                                    .font(.subheadline.bold())
-                                                    .foregroundColor(.orange)
-                                                let deltaSign = sub.deltaCalories >= 0 ? "+" : ""
-                                                Text("Δ \(deltaSign)\(Int(sub.deltaCalories)) kcal")
-                                                    .font(.caption2)
-                                                    .foregroundColor(abs(sub.deltaCalories) <= 30 ? .green : .secondary)
-                                            }
-
-                                            Image(systemName: selectedIndex == idx ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(selectedIndex == idx ? .green : .secondary)
-                                                .padding(.leading, 6)
-                                        }
-                                        .padding(12)
-                                        .background(Color.appCardBackground)
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(selectedIndex == idx ? Color.green : Color.clear, lineWidth: 1.5)
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                    }
-
-                    // Botão de Confirmação
-                    if !substitutes.isEmpty {
-                        Button {
-                            if selectedIndex < substitutes.count {
-                                let chosen = substitutes[selectedIndex]
-                                let macros = chosen.substituteFood.calculatedFor(amount: chosen.equivalentAmount)
-                                let newItem = PlannedMealItem(
-                                    food: chosen.substituteFood,
-                                    amount: chosen.equivalentAmount,
-                                    unit: chosen.unit,
-                                    portionName: chosen.suggestedPortion,
-                                    calories: chosen.substituteCalories,
-                                    proteinGrams: macros.protein,
-                                    carbsGrams: macros.carbs,
-                                    fatGrams: macros.fat,
-                                    fiberGrams: macros.fiber
-                                )
-                                onConfirm(newItem)
-                                dismiss()
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: "arrow.2.squarepath")
-                                Text("Confirmar Substituição no Plano")
-                            }
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.green)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                        }
+                    switch mode {
+                    case .adjustPortion:
+                        adjustPortionSection
+                    case .substitute:
+                        substituteSection
                     }
                 }
-                .padding()
+                .padding(.bottom, 24)
             }
-            .navigationTitle("Substituir Alimento")
+            .navigationTitle(mode == .adjustPortion ? "Ajustar Porção" : "Substituir Alimento")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") { dismiss() }
+                    Button("Fechar") { dismiss() }
                 }
             }
             .background(Color.appBackground)
@@ -1147,9 +1129,334 @@ private struct FoodSubstitutionSheet: View {
                     for: target.item.food,
                     amount: target.item.amount
                 )
+                if let first = substitutes.first {
+                    substituteGrams = first.equivalentAmount
+                }
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    // MARK: - Segmento 1: Ajustar Porção Atual
+
+    private var adjustPortionSection: some View {
+        let macros = target.item.food.calculatedFor(amount: currentGrams)
+
+        return VStack(spacing: 16) {
+            // Card do Alimento Atual
+            VStack(alignment: .leading, spacing: 10) {
+                Text("ALIMENTO SELECIONADO")
+                    .font(.caption.bold())
+                    .foregroundColor(.secondary)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(target.item.food.name)
+                            .font(.headline)
+                        Text("Porção de referência: \(Int(target.item.amount))g")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Text("\(Int(currentGrams))g")
+                        .font(.title2.bold())
+                        .foregroundColor(.green)
+                }
+
+                Divider()
+
+                // Macros Recalculados em Tempo Real
+                HStack(spacing: 12) {
+                    macroBadge(title: "Calorias", value: "\(Int(macros.calories)) kcal", color: .orange)
+                    macroBadge(title: "Proteína", value: String(format: "%.1fg", macros.protein), color: .blue)
+                    macroBadge(title: "Carbos", value: String(format: "%.1fg", macros.carbs), color: .green)
+                    macroBadge(title: "Gorduras", value: String(format: "%.1fg", macros.fat), color: .purple)
+                }
+            }
+            .padding(16)
+            .background(Color.appCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
+
+            // Controle Granular da Quantidade
+            VStack(spacing: 14) {
+                Text("CONTROLE GRANULAR DA QUANTIDADE")
+                    .font(.caption.bold())
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack {
+                    Text("Quantidade:")
+                        .font(.subheadline)
+                    Spacer()
+                    Button {
+                        currentGrams = max(5.0, currentGrams - 5.0)
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Text(String(format: "%.0fg", currentGrams))
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .frame(minWidth: 80)
+                        .multilineTextAlignment(.center)
+
+                    Button {
+                        currentGrams += 5.0
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.green)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.vertical, 4)
+
+                // Botões Rápidos de Ajuste
+                HStack(spacing: 10) {
+                    quickAdjustButton(delta: -50)
+                    quickAdjustButton(delta: -20)
+                    quickAdjustButton(delta: +20)
+                    quickAdjustButton(delta: +50)
+                }
+            }
+            .padding(16)
+            .background(Color.appCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
+
+            // Botão Salvar Nova Quantidade
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    planStore.updateItemAmount(
+                        mealId: target.mealId,
+                        itemId: target.item.id,
+                        newAmount: currentGrams
+                    )
+                }
+                dismiss()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Salvar Nova Quantidade (\(Int(currentGrams))g)")
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.green)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+        .padding(.horizontal)
+    }
+
+    private func quickAdjustButton(delta: Double) -> some View {
+        Button {
+            currentGrams = max(5.0, currentGrams + delta)
+        } label: {
+            Text(delta > 0 ? "+\(Int(delta))g" : "\(Int(delta))g")
+                .font(.caption.bold())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Color.appBackground)
+                .foregroundColor(delta > 0 ? .green : .secondary)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Segmento 2: Substituir Alimento
+
+    private var substituteSection: some View {
+        VStack(spacing: 16) {
+            // Item Original (Referência)
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("ORIGINAL: \(target.item.food.name)")
+                        .font(.caption.bold())
+                        .foregroundColor(.secondary)
+                    Text("\(Int(target.item.amount))g • \(Int(target.item.calories)) kcal")
+                        .font(.footnote)
+                        .foregroundColor(.primary)
+                }
+                Spacer()
+                if let first = substitutes.first {
+                    Text(first.group.anchorMacroDescription)
+                        .font(.caption2.bold())
+                        .foregroundColor(.green)
+                }
+            }
+            .padding(12)
+            .background(Color.appCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            // Lista de Substitutos Equivalentes
+            if substitutes.isEmpty {
+                VStack(spacing: 8) {
+                    Text("Nenhum substituto exato do mesmo grupo nutricional encontrado na TBCA.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.appCardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(substitutes.indices, id: \.self) { idx in
+                        let sub = substitutes[idx]
+                        Button {
+                            selectedIndex = idx
+                            substituteGrams = sub.equivalentAmount
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(sub.substituteFood.name)
+                                        .font(.subheadline.bold())
+                                        .foregroundColor(.primary)
+                                    let pText = sub.suggestedPortion ?? "\(Int(sub.equivalentAmount)) \(sub.unit)"
+                                    Text("Equivalência: \(pText) (\(Int(sub.equivalentAmount))g)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
+
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text("\(Int(sub.substituteCalories)) kcal")
+                                        .font(.subheadline.bold())
+                                        .foregroundColor(.orange)
+                                    let deltaSign = sub.deltaCalories >= 0 ? "+" : ""
+                                    Text("Δ \(deltaSign)\(Int(sub.deltaCalories)) kcal")
+                                        .font(.caption2)
+                                        .foregroundColor(abs(sub.deltaCalories) <= 30 ? .green : .secondary)
+                                }
+
+                                Image(systemName: selectedIndex == idx ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(selectedIndex == idx ? .green : .secondary)
+                                    .padding(.leading, 6)
+                            }
+                            .padding(12)
+                            .background(Color.appCardBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(selectedIndex == idx ? Color.green : Color.clear, lineWidth: 1.5)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                // Ajuste Granular da Quantidade do Substituto Selecionado
+                if selectedIndex < substitutes.count {
+                    let chosen = substitutes[selectedIndex]
+                    let chosenMacros = chosen.substituteFood.calculatedFor(amount: substituteGrams)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("CALIBRAR QUANTIDADE DO SUBSTITUTO")
+                            .font(.caption.bold())
+                            .foregroundColor(.secondary)
+
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(chosen.substituteFood.name)
+                                    .font(.subheadline.bold())
+                                Text("Ajuste a gramatura desejada:")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Button {
+                                substituteGrams = max(5.0, substituteGrams - 10.0)
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+
+                            Text(String(format: "%.0fg", substituteGrams))
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .frame(minWidth: 70)
+                                .multilineTextAlignment(.center)
+
+                            Button {
+                                substituteGrams += 10.0
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.green)
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        Divider()
+
+                        // Macros em tempo real para a quantidade customizada do substituto
+                        HStack(spacing: 8) {
+                            macroBadge(title: "Calorias", value: "\(Int(chosenMacros.calories)) kcal", color: .orange)
+                            macroBadge(title: "Proteína", value: String(format: "%.1fg", chosenMacros.protein), color: .blue)
+                            macroBadge(title: "Carbos", value: String(format: "%.1fg", chosenMacros.carbs), color: .green)
+                            macroBadge(title: "Gorduras", value: String(format: "%.1fg", chosenMacros.fat), color: .purple)
+                        }
+                    }
+                    .padding(14)
+                    .background(Color.appCardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                    // Botão Confirmar Substituição
+                    Button {
+                        let macros = chosen.substituteFood.calculatedFor(amount: substituteGrams)
+                        let pText = chosen.suggestedPortion ?? "\(Int(substituteGrams)) \(chosen.unit)"
+                        let newItem = PlannedMealItem(
+                            food: chosen.substituteFood,
+                            amount: substituteGrams,
+                            unit: chosen.unit,
+                            portionName: pText,
+                            calories: macros.calories,
+                            proteinGrams: macros.protein,
+                            carbsGrams: macros.carbs,
+                            fatGrams: macros.fat,
+                            fiberGrams: macros.fiber
+                        )
+                        onConfirm(newItem)
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.2.squarepath")
+                            Text("Confirmar Substituição (\(Int(substituteGrams))g)")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.green)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private func macroBadge(title: String, value: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.caption.bold())
+                .foregroundColor(color)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
