@@ -24,4 +24,5 @@ targets:
       INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
       INFOPLIST_KEY_NSMicrophoneUsageDescription: "O NutriPilot utiliza o microfone para transcrição rápida por voz das suas refeições."
       INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "O NutriPilot analisa o áudio para identificar alimentos e porções da TBCA."
+      INFOPLIST_KEY_NSSupportsLiveActivities: YES
       CODE_SIGN_STYLE: Automatic

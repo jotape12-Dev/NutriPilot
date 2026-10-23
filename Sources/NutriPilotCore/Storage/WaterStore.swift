@@ -144,6 +144,7 @@ public final class WaterStore: @unchecked Sendable {
         )
         logs.append(newLog)
         persistToDisk()
+        notifyLiveActivityUpdate()
         return newLog
     }
 
@@ -159,6 +160,7 @@ public final class WaterStore: @unchecked Sendable {
 
         logs.removeAll { $0.id == id }
         persistToDisk()
+        notifyLiveActivityUpdate()
     }
 
     @discardableResult
@@ -169,6 +171,7 @@ public final class WaterStore: @unchecked Sendable {
         guard !logs.isEmpty else { return nil }
         let removed = logs.removeLast()
         persistToDisk()
+        notifyLiveActivityUpdate()
         return removed
     }
 
@@ -178,6 +181,22 @@ public final class WaterStore: @unchecked Sendable {
 
         logs.removeAll()
         persistToDisk()
+        notifyLiveActivityUpdate()
+    }
+
+    // MARK: - Sincronização com Live Activity
+
+    private func notifyLiveActivityUpdate() {
+        #if canImport(ActivityKit)
+        let total = self.totalWaterMl(for: Date())
+        let target = ProfileStore.shared.currentTarget?.waterMl ?? 2500.0
+        let breakdown = self.pacingBreakdown(at: Date(), targetWaterMl: target)
+        Task { @MainActor in
+            if WaterLiveActivityManager.shared.isActivityActive {
+                WaterLiveActivityManager.shared.updateLiveActivity(currentWaterMl: total, breakdown: breakdown)
+            }
+        }
+        #endif
     }
 
     // MARK: - Consultas Diárias
