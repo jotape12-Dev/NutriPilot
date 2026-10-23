@@ -154,4 +154,95 @@ public enum NutritionCalculator {
             formulaUsed: formulaUsed
         )
     }
+
+    /// Calcula a decomposição aprofundada dos componentes de gasto energético diário.
+    public static func calculateMetabolicBreakdown(
+        profile: UserProfile,
+        leanMassKg: Double? = nil,
+        bodyFatPercentage: Double? = nil,
+        measuredBMR: Double? = nil
+    ) -> MetabolicBreakdown {
+        let baselineMifflin = calculateBMR(
+            weightKg: profile.currentWeightKg,
+            heightCm: profile.heightCm,
+            age: profile.age,
+            sex: profile.sex
+        )
+
+        let bmr: Double
+        let formula: String
+        if let measured = measuredBMR, measured > 500 {
+            bmr = measured.rounded()
+            formula = "Laudo Bioimpedância (Medido)"
+        } else if let lean = leanMassKg, lean > 0 {
+            bmr = calculateBMRKatchMcArdle(leanMassKg: lean)
+            formula = "Katch-McArdle (Massa Magra)"
+        } else if let bf = bodyFatPercentage, bf > 0, bf < 100 {
+            bmr = calculateBMRKatchMcArdle(weightKg: profile.currentWeightKg, bodyFatPercentage: bf)
+            formula = "Katch-McArdle (% Gordura)"
+        } else {
+            bmr = baselineMifflin
+            formula = "Mifflin-St Jeor"
+        }
+
+        let tdee = calculateTDEE(bmr: bmr, activityLevel: profile.activityLevel)
+        let tef = (tdee * 0.10).rounded()
+        let totalActivity = max(0.0, tdee - bmr - tef)
+
+        let eatRatio: Double
+        switch profile.activityLevel {
+        case .sedentary: eatRatio = 0.0
+        case .light: eatRatio = 0.35
+        case .moderate: eatRatio = 0.50
+        case .intense: eatRatio = 0.65
+        case .extreme: eatRatio = 0.75
+        }
+
+        let eat = (totalActivity * eatRatio).rounded()
+        let neat = (totalActivity - eat).rounded()
+        let bmrDelta = (bmr - baselineMifflin).rounded()
+
+        return MetabolicBreakdown(
+            bmr: bmr,
+            neat: neat,
+            eat: eat,
+            tef: tef,
+            tdee: tdee,
+            formulaUsed: formula,
+            baselineBMRMifflin: baselineMifflin,
+            bmrDeltaVsMifflin: bmrDelta
+        )
+    }
+}
+
+/// Decomposição detalhada dos componentes de gasto calórico diário do usuário.
+public struct MetabolicBreakdown: Sendable, Equatable, Codable {
+    public let bmr: Double
+    public let neat: Double
+    public let eat: Double
+    public let tef: Double
+    public let tdee: Double
+    public let formulaUsed: String
+    public let baselineBMRMifflin: Double
+    public let bmrDeltaVsMifflin: Double
+
+    public init(
+        bmr: Double,
+        neat: Double,
+        eat: Double,
+        tef: Double,
+        tdee: Double,
+        formulaUsed: String,
+        baselineBMRMifflin: Double,
+        bmrDeltaVsMifflin: Double
+    ) {
+        self.bmr = bmr
+        self.neat = neat
+        self.eat = eat
+        self.tef = tef
+        self.tdee = tdee
+        self.formulaUsed = formulaUsed
+        self.baselineBMRMifflin = baselineBMRMifflin
+        self.bmrDeltaVsMifflin = bmrDeltaVsMifflin
+    }
 }

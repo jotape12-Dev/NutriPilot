@@ -7,9 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09281721FD0544788A06B168 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E76B4F0BACA61E96B2FEF70E /* ProfileSettingsView.swift */; };
 		0CCDD1EE5048633E99E431EF /* MealPlanGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F925E38527D516FD6696BAE /* MealPlanGenerator.swift */; };
 		0D4EE13EC322DF3E4AA912B9 /* NutritionTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D3809FDDE9B5D84817CA80 /* NutritionTarget.swift */; };
 		0F5088D5CAFADB754BD646DF /* BioimpedancePDFParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F084B9EDA01AC4294F205CB5 /* BioimpedancePDFParser.swift */; };
+		21E9CF8DF376EB00DA5F08AF /* BioimpedanceAnalysisSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8F8C63845145E8F6E99419 /* BioimpedanceAnalysisSheet.swift */; };
 		245ABDBF981B3A10340850D7 /* MealPlanAdjustmentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFC540E2F577E3966FAB0E93 /* MealPlanAdjustmentEngine.swift */; };
 		2A81951E2C16C067BCE1128C /* FoodSearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C801680CAB2E442D0F2A83C /* FoodSearchEngine.swift */; };
 		3A9A518982632C0A7C059916 /* MealPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6521F2E0F35B5DCFE9EC2F1A /* MealPlanView.swift */; };
@@ -83,20 +85,24 @@
 		D57760672199AED9BF882D0D /* MealStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealStore.swift; sourceTree = "<group>"; };
 		D5A84FF0AF37BA564900349A /* BodyMeasurementStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyMeasurementStore.swift; sourceTree = "<group>"; };
 		DAF790A5472B13338ADB4678 /* WeightTrendCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightTrendCalculator.swift; sourceTree = "<group>"; };
+		E76B4F0BACA61E96B2FEF70E /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
 		EC321893D2AE27B08F761BA5 /* FoodLoggingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodLoggingView.swift; sourceTree = "<group>"; };
 		F084B9EDA01AC4294F205CB5 /* BioimpedancePDFParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BioimpedancePDFParser.swift; sourceTree = "<group>"; };
+		FE8F8C63845145E8F6E99419 /* BioimpedanceAnalysisSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BioimpedanceAnalysisSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		06863CAF7F89ADB44289009E /* NutriPilotApp */ = {
 			isa = PBXGroup;
 			children = (
+				FE8F8C63845145E8F6E99419 /* BioimpedanceAnalysisSheet.swift */,
 				7C8ABAE5AD21302E7C591554 /* BodyProgressView.swift */,
 				4BB090A702E8772CEB926B55 /* DashboardView.swift */,
 				EC321893D2AE27B08F761BA5 /* FoodLoggingView.swift */,
 				2EA1B77A7287CC3A39222A65 /* MealParserConfirmationSheet.swift */,
 				6521F2E0F35B5DCFE9EC2F1A /* MealPlanView.swift */,
 				46BEF6B2159841EBBD3F1BB7 /* OnboardingView.swift */,
+				E76B4F0BACA61E96B2FEF70E /* ProfileSettingsView.swift */,
 				70D1B5BEDED968B1CD167E71 /* ReportExportView.swift */,
 				9E1CD691C4D69A224C74EF5F /* RootView.swift */,
 				CFB04DDE1C86C5E06957C109 /* WaterView.swift */,
@@ -290,6 +296,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AEADE36E463993789DD0E8C1 /* AppTheme.swift in Sources */,
+				21E9CF8DF376EB00DA5F08AF /* BioimpedanceAnalysisSheet.swift in Sources */,
 				0F5088D5CAFADB754BD646DF /* BioimpedancePDFParser.swift in Sources */,
 				93B469029C3A2614356BF889 /* BodyCompositionCalculator.swift in Sources */,
 				95032D62C543E396B3EB6E74 /* BodyMeasurement.swift in Sources */,
@@ -315,6 +322,7 @@
 				EA5375BE9468F77DEA4C2088 /* NutritionCalculator.swift in Sources */,
 				0D4EE13EC322DF3E4AA912B9 /* NutritionTarget.swift in Sources */,
 				A13DB4135EA819400CECA6B0 /* OnboardingView.swift in Sources */,
+				09281721FD0544788A06B168 /* ProfileSettingsView.swift in Sources */,
 				9924A86233E1B33BBDEBF1B1 /* ProfileStore.swift in Sources */,
 				E21BA5340201BB5D9D96FD86 /* ReportExportView.swift in Sources */,
 				83321D741A7144FC6DE65B56 /* ReportExporter.swift in Sources */,

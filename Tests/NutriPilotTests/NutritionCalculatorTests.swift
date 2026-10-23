@@ -63,4 +63,101 @@ final class NutritionCalculatorTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(result.targetFiberGrams, 25.0)
         XCTAssertLessThanOrEqual(result.targetFiberGrams, 45.0)
     }
+
+    func testMetabolicBreakdownComponentsDecomposition() {
+        let calendar = Calendar.current
+        let birthDate = calendar.date(byAdding: .year, value: -25, to: Date())!
+
+        let profile = UserProfile(
+            name: "João",
+            birthDate: birthDate,
+            sex: .male,
+            heightCm: 178,
+            currentWeightKg: 80.0,
+            activityLevel: .moderate,
+            goal: .fatLoss
+        )
+
+        // 1. Sem dados de bioimpedância -> Usa Mifflin-St Jeor
+        let breakdownMifflin = NutritionCalculator.calculateMetabolicBreakdown(profile: profile)
+        XCTAssertEqual(breakdownMifflin.formulaUsed, "Mifflin-St Jeor")
+        XCTAssertEqual(breakdownMifflin.bmrDeltaVsMifflin, 0.0)
+        // A soma dos componentes BMR + NEAT + EAT + TEF deve igualar TDEE (com tolerância de arredondamento de até 2 kcal)
+        let sumComponentsMifflin = breakdownMifflin.bmr + breakdownMifflin.neat + breakdownMifflin.eat + breakdownMifflin.tef
+        XCTAssertEqual(sumComponentsMifflin, breakdownMifflin.tdee, accuracy: 2.0)
+
+        // 2. Com Massa Magra de 68kg -> Usa Katch-McArdle
+        let breakdownKatch = NutritionCalculator.calculateMetabolicBreakdown(
+            profile: profile,
+            leanMassKg: 68.0
+        )
+        XCTAssertEqual(breakdownKatch.formulaUsed, "Katch-McArdle (Massa Magra)")
+        // Katch-McArdle BMR = 370 + (21.6 * 68) = 370 + 1468.8 = 1838.8 -> 1839 kcal
+        XCTAssertEqual(breakdownKatch.bmr, 1839.0, accuracy: 2.0)
+        // Delta vs baseline
+        XCTAssertEqual(breakdownKatch.bmrDeltaVsMifflin, (breakdownKatch.bmr - breakdownKatch.baselineBMRMifflin).rounded(), accuracy: 1.0)
+        let sumComponentsKatch = breakdownKatch.bmr + breakdownKatch.neat + breakdownKatch.eat + breakdownKatch.tef
+        XCTAssertEqual(sumComponentsKatch, breakdownKatch.tdee, accuracy: 2.0)
+    }
+
+    func testMetabolicBreakdownWithMeasuredBMR() {
+        let calendar = Calendar.current
+        let birthDate = calendar.date(byAdding: .year, value: -28, to: Date())!
+
+        let profile = UserProfile(
+            name: "Lucas",
+            birthDate: birthDate,
+            sex: .male,
+            heightCm: 180,
+            currentWeightKg: 85.0,
+            activityLevel: .intense,
+            goal: .muscleGain
+        )
+
+        let breakdown = NutritionCalculator.calculateMetabolicBreakdown(
+            profile: profile,
+            leanMassKg: 72.0,
+            measuredBMR: 1950.0
+        )
+
+        XCTAssertEqual(breakdown.formulaUsed, "Laudo Bioimpedância (Medido)")
+        XCTAssertEqual(breakdown.bmr, 1950.0)
+        XCTAssertGreaterThan(breakdown.eat, breakdown.neat) // Atividade intensa aloca 65% em EAT
+    }
+
+    func testProfileStoreUpdateProfileRecalculation() {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_profile_\(UUID().uuidString).json")
+        let store = ProfileStore(storageURL: tempURL)
+
+        let birthDate = Calendar.current.date(byAdding: .year, value: -30, to: Date())!
+        let initialProfile = UserProfile(
+            name: "Carlos",
+            birthDate: birthDate,
+            sex: .male,
+            heightCm: 175,
+            currentWeightKg: 80.0,
+            activityLevel: .light,
+            goal: .fatLoss
+        )
+
+        store.saveProfile(initialProfile)
+        let initialCals = store.currentTarget?.calories ?? 0
+
+        // 1. Altera nível de atividade para intense -> Calorias devem subir consideravelmente
+        store.updateProfile(activityLevel: .intense)
+        XCTAssertEqual(store.currentProfile?.activityLevel, .intense)
+        let intenseCals = store.currentTarget?.calories ?? 0
+        XCTAssertGreaterThan(intenseCals, initialCals)
+
+        // 2. Altera objetivo de fatLoss (-20%) para muscleGain (+10%)
+        store.updateProfile(goal: .muscleGain)
+        XCTAssertEqual(store.currentProfile?.goal, .muscleGain)
+        let muscleCals = store.currentTarget?.calories ?? 0
+        XCTAssertGreaterThan(muscleCals, intenseCals)
+
+        // 3. Aplica massa magra de bioimpedância
+        store.updateProfile(leanMassKg: 70.0)
+        XCTAssertEqual(store.currentTarget?.source, .autoCalibrated)
+        XCTAssertTrue(store.currentTarget?.notes?.contains("Katch-McArdle") == true)
+    }
 }

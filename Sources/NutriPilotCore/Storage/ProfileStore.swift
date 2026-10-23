@@ -62,6 +62,56 @@ public final class ProfileStore: @unchecked Sendable {
         persistToDisk()
     }
 
+    /// Atualiza campos específicos do perfil do usuário e opcionalmente recalibra as metas metabólicas.
+    public func updateProfile(
+        name: String? = nil,
+        birthDate: Date? = nil,
+        sex: BiologicalSex? = nil,
+        heightCm: Double? = nil,
+        currentWeightKg: Double? = nil,
+        activityLevel: ActivityLevel? = nil,
+        goal: NutritionGoal? = nil,
+        dietaryRestrictions: [String]? = nil,
+        preferredMealsPerDay: Int? = nil,
+        recalculateTarget: Bool = true,
+        leanMassKg: Double? = nil,
+        bodyFatPercentage: Double? = nil
+    ) {
+        guard var profile = currentProfile else { return }
+
+        if let name = name { profile.name = name }
+        if let birthDate = birthDate { profile.birthDate = birthDate }
+        if let sex = sex { profile.sex = sex }
+        if let heightCm = heightCm { profile.heightCm = heightCm }
+        if let currentWeightKg = currentWeightKg { profile.currentWeightKg = currentWeightKg }
+        if let activityLevel = activityLevel { profile.activityLevel = activityLevel }
+        if let goal = goal { profile.goal = goal }
+        if let dietaryRestrictions = dietaryRestrictions { profile.dietaryRestrictions = dietaryRestrictions }
+        if let preferredMealsPerDay = preferredMealsPerDay { profile.preferredMealsPerDay = preferredMealsPerDay }
+
+        self.currentProfile = profile
+
+        if recalculateTarget {
+            let calculation = NutritionCalculator.calculateFullTarget(
+                from: profile,
+                leanMassKg: leanMassKg,
+                bodyFatPercentage: bodyFatPercentage
+            )
+            self.currentTarget = NutritionTarget(
+                calories: calculation.targetCalories,
+                proteinGrams: calculation.targetProteinGrams,
+                carbsGrams: calculation.targetCarbsGrams,
+                fatGrams: calculation.targetFatGrams,
+                fiberGrams: calculation.targetFiberGrams,
+                waterMl: calculation.targetWaterMl,
+                source: .autoCalibrated,
+                notes: "Recalibrado via \(calculation.formulaUsed)"
+            )
+        }
+
+        persistToDisk()
+    }
+
     private func persistToDisk() {
         guard let profile = currentProfile else { return }
         let payload = StoragePayload(profile: profile, target: currentTarget, hasCompletedOnboarding: hasCompletedOnboarding)

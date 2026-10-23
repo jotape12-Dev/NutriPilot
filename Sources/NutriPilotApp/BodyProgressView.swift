@@ -15,6 +15,7 @@ public struct BodyProgressView: View {
     @State private var isShowingWeighInSheet: Bool = false
     @State private var isShowingCircumferenceSheet: Bool = false
     @State private var isShowingSkinfoldSheet: Bool = false
+    @State private var isShowingBioimpedanceSheet: Bool = false
     @State private var isShowingExportSheet: Bool = false
     @State private var selectedAntropometryProtocol: AntropometryProtocol = .pollock7
     @State private var hapticTrigger: Int = 0
@@ -152,6 +153,12 @@ public struct BodyProgressView: View {
                     _ = bodyStore.addMeasurement(measurement)
                     hapticTrigger += 1
                 }
+            }
+            .sheet(isPresented: $isShowingBioimpedanceSheet) {
+                BioimpedanceAnalysisSheet(
+                    profileStore: profileStore,
+                    bodyStore: bodyStore
+                )
             }
         }
     }
@@ -537,6 +544,15 @@ public struct BodyProgressView: View {
                 Text("Composição Antropométrica")
                     .font(.headline)
                 Spacer()
+                Button {
+                    isShowingBioimpedanceSheet = true
+                    hapticTrigger += 1
+                } label: {
+                    Label("Laudo PDF", systemImage: "doc.text.viewfinder")
+                }
+                .font(.caption.bold())
+                .foregroundColor(.blue)
+
                 Button("Lançar Dobras") {
                     isShowingSkinfoldSheet = true
                     hapticTrigger += 1

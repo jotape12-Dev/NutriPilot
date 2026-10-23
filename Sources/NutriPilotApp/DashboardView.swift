@@ -13,6 +13,7 @@ public struct DashboardView: View {
 
     @State private var isShowingTextLogModal: Bool = false
     @State private var isShowingExportSheet: Bool = false
+    @State private var isShowingProfileSettings: Bool = false
     @State private var hapticTrigger: Int = 0
 
     public init(
@@ -93,6 +94,13 @@ public struct DashboardView: View {
                 ToolbarItem(placement: .primaryAction) {
                     HStack(spacing: 14) {
                         Button {
+                            isShowingProfileSettings = true
+                            hapticTrigger += 1
+                        } label: {
+                            Label("Perfil e Rotina", systemImage: "person.crop.circle")
+                        }
+
+                        Button {
                             isShowingExportSheet = true
                             hapticTrigger += 1
                         } label: {
@@ -107,6 +115,12 @@ public struct DashboardView: View {
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $isShowingProfileSettings) {
+                ProfileSettingsView(
+                    profileStore: ProfileStore.shared,
+                    bodyStore: bodyStore
+                )
             }
             .sheet(isPresented: $isShowingExportSheet) {
                 ReportExportView(
