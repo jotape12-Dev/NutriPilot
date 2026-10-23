@@ -251,6 +251,24 @@ public final class MealPlanStore: @unchecked Sendable {
         setActivePlan(updatedPlan)
     }
 
+    /// Rebalanceia automaticamente todas as refeições do plano ativo para atingir 100% da meta.
+    public func autoRebalanceActivePlan(target: NutritionTarget? = nil) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let plan = activePlan else { return }
+        let effectiveTarget = target ?? NutritionTarget(
+            calories: plan.targetCalories,
+            proteinGrams: plan.targetProteinGrams,
+            carbsGrams: plan.targetCarbsGrams,
+            fatGrams: plan.targetFatGrams,
+            fiberGrams: plan.targetFiberGrams,
+            waterMl: 2800.0
+        )
+        let rebalancedPlan = MealPlanAdjustmentEngine.autoRebalancePlan(plan: plan, target: effectiveTarget)
+        setActivePlan(rebalancedPlan)
+    }
+
     public func clear() {
         lock.lock()
         defer { lock.unlock() }

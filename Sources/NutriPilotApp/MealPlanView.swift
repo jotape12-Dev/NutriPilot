@@ -84,6 +84,15 @@ public struct MealPlanView: View {
                                 Label("Importar Outro Plano", systemImage: "doc.badge.plus")
                             }
 
+                            Button {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                    planStore.autoRebalanceActivePlan(target: currentEffectiveTarget)
+                                    hapticTrigger += 1
+                                }
+                            } label: {
+                                Label("Calibrar Todas as Refeições", systemImage: "sparkles.rectangle.stack")
+                            }
+
                             Divider()
 
                             Button(role: .destructive) {
@@ -302,6 +311,15 @@ public struct MealPlanView: View {
                         Label("Importar Outro Plano", systemImage: "doc.badge.plus")
                     }
 
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                            planStore.autoRebalanceActivePlan(target: currentEffectiveTarget)
+                            hapticTrigger += 1
+                        }
+                    } label: {
+                        Label("Calibrar Todas as Refeições", systemImage: "sparkles.rectangle.stack")
+                    }
+
                     Divider()
 
                     Button(role: .destructive) {
@@ -389,6 +407,42 @@ public struct MealPlanView: View {
                 .padding(.top, 2)
             }
 
+            // Ação Mestra: Calibração Automática de Todas as Refeições do Dia
+            if report.overallLevel != .optimal {
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        planStore.autoRebalanceActivePlan(target: currentEffectiveTarget)
+                        hapticTrigger += 1
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "sparkles.rectangle.stack.fill")
+                            .font(.title3)
+                            .foregroundColor(.white)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Calibrar Todas as Refeições Automaticamente")
+                                .font(.subheadline.bold())
+                                .foregroundColor(.white)
+                            Text("Equilibra arroz, proteínas e gorduras no dia para bater 100% da meta")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.85))
+                        }
+                        Spacer()
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                    }
+                    .padding(12)
+                    .background(
+                        LinearGradient(colors: [Color.green, Color.mint], startPoint: .leading, endPoint: .trailing)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: Color.green.opacity(0.25), radius: 3, y: 1)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
+
             // Sugestões Clínicas de Ajuste para Bater a Meta
             let suggestions = planAdjustmentSuggestions
             if !suggestions.isEmpty {
@@ -445,12 +499,16 @@ public struct MealPlanView: View {
 
             Button {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                    planStore.applyAdjustment(suggestion)
+                    if suggestion.actionType == .autoRebalance {
+                        planStore.autoRebalanceActivePlan(target: currentEffectiveTarget)
+                    } else {
+                        planStore.applyAdjustment(suggestion)
+                    }
                     hapticTrigger += 1
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "plus.circle.fill")
+                    Image(systemName: suggestion.actionType == .autoRebalance ? "sparkles" : "plus.circle.fill")
                     Text(suggestion.buttonLabel)
                 }
                 .font(.footnote.bold())

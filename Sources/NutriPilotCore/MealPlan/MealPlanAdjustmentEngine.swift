@@ -15,12 +15,22 @@ public struct ScaledItemTarget: Codable, Sendable, Equatable {
     }
 }
 
+/// Papel nutricional predominante do alimento para distribuição balanceada de macros.
+public enum FoodMacroRole: Sendable {
+    case protein
+    case carbs
+    case fat
+    case vegetableOrFruit
+    case other
+}
+
 /// Tipo de ação prescritiva gerada pelo motor de ajustes para equilibrar o plano alimentar.
 public enum AdjustmentActionType: Codable, Sendable, Equatable {
     case addFood(mealId: UUID, food: FoodItem, amount: Double)
     case scaleFood(mealId: UUID, itemId: UUID, newAmount: Double, originalAmount: Double)
     case removeFood(mealId: UUID, itemId: UUID)
     case batchScaleFood(targets: [ScaledItemTarget])
+    case autoRebalance
 }
 
 /// Sugestão clínica inteligente para calibrar o plano alimentar e atingir a conformidade ideal das metas.
@@ -56,12 +66,279 @@ public struct PlanAdjustmentSuggestion: Identifiable, Codable, Sendable, Equatab
 public enum MealPlanAdjustmentEngine {
 
     // Limites fisiológicos e clínicos de segurança para porções individuais por refeição
-    public static let maxSingleServingRiceGrams: Double = 250.0
-    public static let targetStandardRiceServingGrams: Double = 180.0
-    public static let maxSingleServingMeatGrams: Double = 250.0
-    public static let maxSingleServingOliveOilGrams: Double = 20.0
+    public static let maxSingleServingRiceGrams: Double = 220.0
+    public static let targetStandardRiceServingGrams: Double = 160.0
+    public static let maxSingleServingMeatGrams: Double = 220.0
+    public static let maxSingleServingOliveOilGrams: Double = 15.0
 
-    /// Gera até 3 sugestões clínicas mais relevantes e de maior impacto fisiológico para o plano atual.
+    // MARK: - Classificação e Limites de Porções
+
+    public static func classifyMacroRole(for item: PlannedMealItem) -> FoodMacroRole {
+        let name = item.food.name.lowercased()
+
+        if name.contains("alface") || name.contains("tomate") || name.contains("rúcula") ||
+           name.contains("pepino") || name.contains("espinafre") || name.contains("brócolis") {
+            return .vegetableOrFruit
+        }
+
+        if name.contains("azeite") || name.contains("óleo") || name.contains("manteiga") ||
+           name.contains("castanha") || name.contains("nozes") || name.contains("amendoim") ||
+           (item.food.fatGrams * 9.0 >= 0.55 * max(1.0, item.food.calories)) {
+            return .fat
+        }
+
+        if name.contains("frango") || name.contains("carne") || name.contains("bife") ||
+           name.contains("peixe") || name.contains("atum") || name.contains("tilápia") ||
+           name.contains("ovo") || name.contains("clara") || name.contains("whey") ||
+           name.contains("iogurte") || name.contains("queijo") ||
+           (item.food.proteinGrams * 4.0 >= 0.35 * max(1.0, item.food.calories)) {
+            return .protein
+        }
+
+        if name.contains("arroz") || name.contains("batata") || name.contains("mandioca") ||
+           name.contains("aveia") || name.contains("pão") || name.contains("tapioca") ||
+           name.contains("macarrão") || name.contains("banana") ||
+           (item.food.carbsGrams * 4.0 >= 0.45 * max(1.0, item.food.calories)) {
+            return .carbs
+        }
+
+        return .other
+    }
+
+    public static func safeServingBounds(for item: PlannedMealItem) -> (min: Double, max: Double, standard: Double) {
+        let name = item.food.name.lowercased()
+        if name.contains("arroz") {
+            return (min: 60.0, max: 220.0, standard: 160.0)
+        } else if name.contains("batata") || name.contains("mandioca") {
+            return (min: 80.0, max: 250.0, standard: 150.0)
+        } else if name.contains("aveia") {
+            return (min: 20.0, max: 80.0, standard: 40.0)
+        } else if name.contains("pão") {
+            return (min: 30.0, max: 100.0, standard: 50.0)
+        } else if name.contains("frango") || name.contains("carne") || name.contains("peixe") || name.contains("bife") {
+            return (min: 80.0, max: 220.0, standard: 140.0)
+        } else if name.contains("ovo") {
+            return (min: 50.0, max: 180.0, standard: 100.0)
+        } else if name.contains("whey") {
+            return (min: 15.0, max: 40.0, standard: 30.0)
+        } else if name.contains("azeite") || name.contains("óleo") {
+            return (min: 5.0, max: 15.0, standard: 10.0)
+        } else if name.contains("castanha") || name.contains("amendoim") {
+            return (min: 10.0, max: 30.0, standard: 20.0)
+        }
+        return (min: max(5.0, item.amount * 0.5), max: max(20.0, item.amount * 1.8), standard: item.amount)
+    }
+
+    // MARK: - Rebalanceamento Automático Global
+
+    /// Reajusta e equilibra proporcionalmente as porções de todas as refeições do dia para atingir 100% das metas diárias.
+    public static func autoRebalancePlan(plan: DailyMealPlan, target: NutritionTarget) -> DailyMealPlan {
+        guard !plan.meals.isEmpty else { return plan }
+
+        var workingMeals = plan.meals
+
+        // 1. Passo Inicial: Clamp de segurança em porções gigantes/aberrantes
+        for mIdx in workingMeals.indices {
+            var items = workingMeals[mIdx].items
+            for iIdx in items.indices {
+                let item = items[iIdx]
+                let bounds = safeServingBounds(for: item)
+                if item.amount > bounds.max {
+                    let clampedAmount = bounds.standard
+                    let calc = item.food.calculatedFor(amount: clampedAmount)
+                    items[iIdx] = PlannedMealItem(
+                        id: item.id,
+                        food: item.food,
+                        amount: clampedAmount,
+                        unit: item.unit,
+                        portionName: nil,
+                        calories: calc.calories,
+                        proteinGrams: calc.protein,
+                        carbsGrams: calc.carbs,
+                        fatGrams: calc.fat,
+                        fiberGrams: calc.fiber
+                    )
+                }
+            }
+            let oldM = workingMeals[mIdx]
+            workingMeals[mIdx] = PlannedMeal(
+                id: oldM.id,
+                mealType: oldM.mealType,
+                name: oldM.name,
+                suggestedTime: oldM.suggestedTime,
+                targetCalories: oldM.targetCalories,
+                items: items
+            )
+        }
+
+        // 2. Passo de Proteína: Distribuir iterativamente nos alimentos proteicos de todas as refeições
+        let currentProt = workingMeals.reduce(0.0) { $0 + $1.totalProtein }
+        let protDelta = target.proteinGrams - currentProt
+
+        if abs(protDelta) > 3.0 {
+            var proteinEntries: [(mealIdx: Int, itemIdx: Int, item: PlannedMealItem, bounds: (min: Double, max: Double, standard: Double))] = []
+            for mIdx in workingMeals.indices {
+                for iIdx in workingMeals[mIdx].items.indices {
+                    let it = workingMeals[mIdx].items[iIdx]
+                    if classifyMacroRole(for: it) == .protein {
+                        proteinEntries.append((mIdx, iIdx, it, safeServingBounds(for: it)))
+                    }
+                }
+            }
+            distributeDelta(deltaMacro: protDelta, gramsPerMacro: 3.3, entries: proteinEntries, workingMeals: &workingMeals)
+        }
+
+        // 3. Passo de Carboidratos: Distribuir iterativamente nos alimentos ricos em carboidrato
+        let currentCarbs = workingMeals.reduce(0.0) { $0 + $1.totalCarbs }
+        let carbsDelta = target.carbsGrams - currentCarbs
+
+        if abs(carbsDelta) > 3.0 {
+            var carbEntries: [(mealIdx: Int, itemIdx: Int, item: PlannedMealItem, bounds: (min: Double, max: Double, standard: Double))] = []
+            for mIdx in workingMeals.indices {
+                for iIdx in workingMeals[mIdx].items.indices {
+                    let it = workingMeals[mIdx].items[iIdx]
+                    if classifyMacroRole(for: it) == .carbs {
+                        carbEntries.append((mIdx, iIdx, it, safeServingBounds(for: it)))
+                    }
+                }
+            }
+            distributeDelta(deltaMacro: carbsDelta, gramsPerMacro: 3.5, entries: carbEntries, workingMeals: &workingMeals)
+        }
+
+        // 4. Passo de Gorduras: Distribuir nas fontes lipídicas (azeite, oleaginosas)
+        let currentFat = workingMeals.reduce(0.0) { $0 + $1.totalFat }
+        let fatDelta = target.fatGrams - currentFat
+
+        if abs(fatDelta) > 2.0 {
+            var fatEntries: [(mealIdx: Int, itemIdx: Int, item: PlannedMealItem, bounds: (min: Double, max: Double, standard: Double))] = []
+            for mIdx in workingMeals.indices {
+                for iIdx in workingMeals[mIdx].items.indices {
+                    let it = workingMeals[mIdx].items[iIdx]
+                    if classifyMacroRole(for: it) == .fat {
+                        fatEntries.append((mIdx, iIdx, it, safeServingBounds(for: it)))
+                    }
+                }
+            }
+            distributeDelta(deltaMacro: fatDelta, gramsPerMacro: 1.1, entries: fatEntries, workingMeals: &workingMeals)
+        }
+
+        // 5. Sintonia Fina Calórica
+        let currentCals = workingMeals.reduce(0.0) { $0 + $1.totalCalories }
+        let calDelta = target.calories - currentCals
+
+        if abs(calDelta) > 40.0 {
+            var carbEntries: [(mealIdx: Int, itemIdx: Int, item: PlannedMealItem, bounds: (min: Double, max: Double, standard: Double))] = []
+            for mIdx in workingMeals.indices {
+                for iIdx in workingMeals[mIdx].items.indices {
+                    let it = workingMeals[mIdx].items[iIdx]
+                    if classifyMacroRole(for: it) == .carbs {
+                        carbEntries.append((mIdx, iIdx, it, safeServingBounds(for: it)))
+                    }
+                }
+            }
+            distributeDelta(deltaMacro: calDelta / 4.0, gramsPerMacro: 3.5, entries: carbEntries, workingMeals: &workingMeals)
+        }
+
+        // 6. Atualização final de metas por refeição
+        for mIdx in workingMeals.indices {
+            let m = workingMeals[mIdx]
+            let cals = m.items.reduce(0.0) { $0 + $1.calories }.rounded(to: 1)
+            workingMeals[mIdx] = PlannedMeal(
+                id: m.id,
+                mealType: m.mealType,
+                name: m.name,
+                suggestedTime: m.suggestedTime,
+                targetCalories: cals,
+                items: m.items
+            )
+        }
+
+        return DailyMealPlan(
+            id: plan.id,
+            createdAt: plan.createdAt,
+            targetCalories: target.calories,
+            targetProteinGrams: target.proteinGrams,
+            targetCarbsGrams: target.carbsGrams,
+            targetFatGrams: target.fatGrams,
+            targetFiberGrams: target.fiberGrams,
+            meals: workingMeals
+        )
+    }
+
+    private static func distributeDelta(
+        deltaMacro: Double,
+        gramsPerMacro: Double,
+        entries: [(mealIdx: Int, itemIdx: Int, item: PlannedMealItem, bounds: (min: Double, max: Double, standard: Double))],
+        workingMeals: inout [PlannedMeal]
+    ) {
+        var remainingMacro = deltaMacro
+        for _ in 0..<3 {
+            guard abs(remainingMacro) > 0.8 else { break }
+
+            let available = entries.filter { entry in
+                let current = workingMeals[entry.mealIdx].items[entry.itemIdx].amount
+                return remainingMacro > 0 ? current < entry.bounds.max : current > entry.bounds.min
+            }
+            guard !available.isEmpty else { break }
+
+            let deltaFoodGrams = (remainingMacro * gramsPerMacro) / Double(available.count)
+            var consumedMacro = 0.0
+
+            for entry in available {
+                let oldItem = workingMeals[entry.mealIdx].items[entry.itemIdx]
+                let unclamped = oldItem.amount + deltaFoodGrams
+                let newAmount = min(entry.bounds.max, max(entry.bounds.min, unclamped)).rounded(to: 1)
+                let actualDiff = newAmount - oldItem.amount
+                if abs(actualDiff) > 0.05 {
+                    let calc = oldItem.food.calculatedFor(amount: newAmount)
+                    workingMeals[entry.mealIdx] = updateItemInMeal(
+                        meal: workingMeals[entry.mealIdx],
+                        itemIdx: entry.itemIdx,
+                        newAmount: newAmount,
+                        calc: calc
+                    )
+                    consumedMacro += (actualDiff / gramsPerMacro)
+                }
+            }
+            remainingMacro -= consumedMacro
+        }
+    }
+
+    private static func updateItemInMeal(
+        meal: PlannedMeal,
+        itemIdx: Int,
+        newAmount: Double,
+        calc: (calories: Double, protein: Double, carbs: Double, fat: Double, fiber: Double)
+    ) -> PlannedMeal {
+        var items = meal.items
+        guard itemIdx < items.count else { return meal }
+        let oldItem = items[itemIdx]
+        let validAmount = max(1.0, newAmount.rounded(to: 1))
+        items[itemIdx] = PlannedMealItem(
+            id: oldItem.id,
+            food: oldItem.food,
+            amount: validAmount,
+            unit: oldItem.unit,
+            portionName: nil,
+            calories: calc.calories,
+            proteinGrams: calc.protein,
+            carbsGrams: calc.carbs,
+            fatGrams: calc.fat,
+            fiberGrams: calc.fiber
+        )
+        return PlannedMeal(
+            id: meal.id,
+            mealType: meal.mealType,
+            name: meal.name,
+            suggestedTime: meal.suggestedTime,
+            targetCalories: meal.targetCalories,
+            items: items
+        )
+    }
+
+    // MARK: - Geração de Sugestões Individuais e Rebalanceamento
+
+    /// Gera até 5 sugestões clínicas mais relevantes e de maior impacto fisiológico para o plano atual.
     public static func generateSuggestions(
         plan: DailyMealPlan,
         target: NutritionTarget,
@@ -75,6 +352,28 @@ public enum MealPlanAdjustmentEngine {
         let proteinDelta = plan.totalProtein - target.proteinGrams
         let calorieDelta = plan.totalCalories - target.calories
 
+        // MARK: - Sugestão Mestra: Rebalanceamento Automático Global
+        let hasMacroDiscrepancy = abs(calorieDelta) > 120.0 || abs(proteinDelta) > 15.0 || plan.meals.contains(where: {
+            $0.items.contains(where: { $0.amount > maxSingleServingRiceGrams && $0.food.name.localizedCaseInsensitiveContains("arroz") })
+        })
+
+        if hasMacroDiscrepancy {
+            suggestions.append(PlanAdjustmentSuggestion(
+                title: "Calibrar Todas as Refeições Automaticamente",
+                explanation: "O algoritmo equilibra as porções de arroz, proteínas e gorduras em todas as refeições do dia para atingir 100% da sua meta.",
+                actionType: .autoRebalance,
+                macroImpact: MacroBreakdown(
+                    calories: target.calories - plan.totalCalories,
+                    proteinGrams: target.proteinGrams - plan.totalProtein,
+                    carbsGrams: target.carbsGrams - plan.totalCarbs,
+                    fatGrams: target.fatGrams - plan.totalFat,
+                    fiberGrams: target.fiberGrams - plan.totalFiber
+                ),
+                badgeLabel: "100% da Meta",
+                buttonLabel: "Calibrar Todas as Refeições"
+            ))
+        }
+
         // MARK: - 0. Detecção Prioritária de Refeição Hipercalórica / Porção Aberrante (Safety Cap)
         for meal in plan.meals {
             if let overloadedRice = meal.items.first(where: {
@@ -87,7 +386,6 @@ public enum MealPlanAdjustmentEngine {
                 if let otherMeal = otherMeal,
                    let otherRice = otherMeal.items.first(where: { $0.food.name.localizedCaseInsensitiveContains("arroz") }),
                    otherRice.amount < 200.0 {
-                    // Redistribui o excesso entre o almoço e jantar
                     let newCurrentAmount = targetStandardRiceServingGrams
                     let neededForOther = min(targetStandardRiceServingGrams, otherRice.amount + 60.0)
 
@@ -124,7 +422,6 @@ public enum MealPlanAdjustmentEngine {
                         buttonLabel: "Redistribuir Arroz no Dia"
                     ))
                 } else {
-                    // Normalização direta para 180g
                     let newAmount = targetStandardRiceServingGrams
                     let diff = overloadedRice.amount - newAmount
                     let diffCalc = overloadedRice.food.calculatedFor(amount: diff)
@@ -151,7 +448,6 @@ public enum MealPlanAdjustmentEngine {
 
         // MARK: - 1. Proteína Baixa (Déficit proteico > 15g)
         if proteinDelta < -15.0 {
-            // Verifica se tanto almoço quanto jantar possuem frango para distribuição multi-refeição
             var chickenTargets: [(meal: PlannedMeal, item: PlannedMealItem)] = []
             for meal in plan.meals where meal.mealType == .lunch || meal.mealType == .dinner {
                 if let chickenItem = meal.items.first(where: {
@@ -162,7 +458,7 @@ public enum MealPlanAdjustmentEngine {
             }
 
             if chickenTargets.count >= 2 {
-                let perMealAdd = 25.0 // +25g no almoço e +25g no jantar = +50g frango (~16g proteína)
+                let perMealAdd = 25.0
                 var scaleTargets: [ScaledItemTarget] = []
                 var totalImpact = MacroBreakdown(calories: 0, proteinGrams: 0, carbsGrams: 0, fatGrams: 0, fiberGrams: 0)
 
@@ -209,7 +505,6 @@ public enum MealPlanAdjustmentEngine {
                 ))
             }
 
-            // Sugestão alternativa de Whey Protein no lanche
             let targetMeal = plan.meals.first(where: {
                 $0.mealType == .afternoonSnack || $0.mealType == .morningSnack
             }) ?? plan.meals.min(by: { $0.totalProtein < $1.totalProtein }) ?? plan.meals[0]
@@ -299,8 +594,7 @@ public enum MealPlanAdjustmentEngine {
             }
 
             if riceTargets.count >= 2 {
-                // Distribui igualmente entre Almoço e Jantar para não sobrecarregar nenhuma refeição
-                let perMealAdd = 35.0 // +35g no almoço e +35g no jantar = +70g total (~91 kcal, 20g carbos)
+                let perMealAdd = 35.0
                 var scaleTargets: [ScaledItemTarget] = []
                 var totalImpact = MacroBreakdown(calories: 0, proteinGrams: 0, carbsGrams: 0, fatGrams: 0, fiberGrams: 0)
 
@@ -349,39 +643,6 @@ public enum MealPlanAdjustmentEngine {
                         buttonLabel: "Aumentar +\(Int(additionalGrams))g Arroz"
                     ))
                 }
-            } else {
-                // Nenhuma refeição com arroz disponível abaixo do teto: adiciona carboidrato moderado em outra refeição
-                let targetMeal = plan.meals.first(where: { $0.mealType == .lunch || $0.mealType == .dinner }) ?? plan.meals[0]
-                let batataFood = TBCAFoodDatabase.foods.first(where: {
-                    $0.name.localizedCaseInsensitiveContains("batata-doce")
-                }) ?? FoodItem(
-                    name: "Batata-doce cozida",
-                    servingSize: 100.0,
-                    servingUnit: "g",
-                    calories: 77.0,
-                    proteinGrams: 0.6,
-                    carbsGrams: 18.4,
-                    fatGrams: 0.1,
-                    fiberGrams: 2.2
-                )
-                let amount = 100.0
-                let calc = batataFood.calculatedFor(amount: amount)
-                let impact = MacroBreakdown(
-                    calories: calc.calories,
-                    proteinGrams: calc.protein,
-                    carbsGrams: calc.carbs,
-                    fatGrams: calc.fat,
-                    fiberGrams: calc.fiber
-                )
-
-                suggestions.append(PlanAdjustmentSuggestion(
-                    title: "Adicionar Batata-Doce no \(targetMeal.name)",
-                    explanation: "O plano está \(abs(Int(calorieDelta))) kcal abaixo do ideal. Adicione 100g de batata-doce para estabilizar o déficit sem sobrecarregar as porções.",
-                    actionType: .addFood(mealId: targetMeal.id, food: batataFood, amount: amount),
-                    macroImpact: impact,
-                    badgeLabel: "+77 kcal",
-                    buttonLabel: "Adicionar Batata-Doce"
-                ))
             }
         }
 
@@ -390,7 +651,6 @@ public enum MealPlanAdjustmentEngine {
         if isCalorieSurplus {
             var reducedFatOrCarb = false
 
-            // Procura azeite para reduzir
             for meal in plan.meals {
                 if let azeiteItem = meal.items.first(where: {
                     $0.food.name.localizedCaseInsensitiveContains("azeite") && $0.amount >= 13.0
@@ -419,7 +679,6 @@ public enum MealPlanAdjustmentEngine {
                 }
             }
 
-            // Procura arroz para reduzir distribuído entre almoço e jantar
             if !reducedFatOrCarb {
                 var eligibleRiceToReduce: [(meal: PlannedMeal, item: PlannedMealItem)] = []
                 for meal in plan.meals where meal.mealType == .lunch || meal.mealType == .dinner {
@@ -431,7 +690,7 @@ public enum MealPlanAdjustmentEngine {
                 }
 
                 if eligibleRiceToReduce.count >= 2 {
-                    let perMealReduce = 30.0 // -30g no almoço e -30g no jantar
+                    let perMealReduce = 30.0
                     var scaleTargets: [ScaledItemTarget] = []
                     var totalImpact = MacroBreakdown(calories: 0, proteinGrams: 0, carbsGrams: 0, fatGrams: 0, fiberGrams: 0)
 
@@ -457,32 +716,12 @@ public enum MealPlanAdjustmentEngine {
                         badgeLabel: "\(Int(totalImpact.calories)) kcal (2 Refeições)",
                         buttonLabel: "Reduzir (-30g / -30g)"
                     ))
-                } else if let (singleMeal, riceItem) = eligibleRiceToReduce.first {
-                    let reduceGrams = 40.0
-                    let newAmount = max(60.0, riceItem.amount - reduceGrams)
-                    let redCalc = riceItem.food.calculatedFor(amount: reduceGrams)
-                    let impact = MacroBreakdown(
-                        calories: -redCalc.calories,
-                        proteinGrams: -redCalc.protein,
-                        carbsGrams: -redCalc.carbs,
-                        fatGrams: -redCalc.fat,
-                        fiberGrams: -redCalc.fiber
-                    )
-
-                    suggestions.append(PlanAdjustmentSuggestion(
-                        title: "Ajustar Porção de Arroz no \(singleMeal.name)",
-                        explanation: "Diminuir 40g de arroz economiza \(Int(redCalc.calories)) kcal preservando a adesão ao déficit.",
-                        actionType: .scaleFood(mealId: singleMeal.id, itemId: riceItem.id, newAmount: newAmount, originalAmount: riceItem.amount),
-                        macroImpact: impact,
-                        badgeLabel: "-\(Int(redCalc.calories)) kcal",
-                        buttonLabel: "Reduzir 40g Arroz"
-                    ))
                 }
             }
         }
 
-        // Limita a até 3 sugestões de maior impacto clínico
-        return Array(suggestions.prefix(3))
+        // Limita a até 5 sugestões de maior impacto clínico
+        return Array(suggestions.prefix(5))
     }
 
     /// Aplica uma sugestão de ajuste diretamente sobre a estrutura de um DailyMealPlan, gerando um novo plano imutável.
@@ -490,6 +729,17 @@ public enum MealPlanAdjustmentEngine {
         var updatedMeals = plan.meals
 
         switch suggestion.actionType {
+        case .autoRebalance:
+            let tgt = NutritionTarget(
+                calories: plan.targetCalories,
+                proteinGrams: plan.targetProteinGrams,
+                carbsGrams: plan.targetCarbsGrams,
+                fatGrams: plan.targetFatGrams,
+                fiberGrams: plan.targetFiberGrams,
+                waterMl: 2800.0
+            )
+            return autoRebalancePlan(plan: plan, target: tgt)
+
         case .addFood(let mealId, let food, let amount):
             guard let mealIdx = updatedMeals.firstIndex(where: { $0.id == mealId }) else { return plan }
             let validAmount = max(1.0, amount.rounded(to: 1))
@@ -529,7 +779,7 @@ public enum MealPlanAdjustmentEngine {
                 food: oldItem.food,
                 amount: validAmount,
                 unit: oldItem.unit,
-                portionName: nil, // Limpa o rótulo singular fixo antigo para não dizer "Colher de sopa cheia (790g)"
+                portionName: nil,
                 calories: calc.calories,
                 proteinGrams: calc.protein,
                 carbsGrams: calc.carbs,

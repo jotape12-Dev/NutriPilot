@@ -300,7 +300,90 @@ final class MealPlanAdjustmentEngineTests: XCTestCase {
 
         // Aplicar a normalização
         let correctedPlan = MealPlanAdjustmentEngine.apply(suggestion: normalizationSuggestion, to: plan)
-        XCTAssertEqual(correctedPlan.meals[0].items[0].amount, 180.0) // Reduzido de 790g para 180g seguro
+        XCTAssertEqual(correctedPlan.meals[0].items[0].amount, MealPlanAdjustmentEngine.targetStandardRiceServingGrams)
         XCTAssertLessThan(correctedPlan.totalCalories, 300.0)
+    }
+
+    // MARK: - 8. Testar Calibração e Rebalanceamento Automático Global de Todas as Refeições
+    func testAutoRebalancePlanDistributesMacrosHarmoniouslyAcrossMeals() {
+        let rice = makeFoodItem(name: "Arroz branco cozido", cals: 130.0, prot: 2.7, carbs: 28.2, fat: 0.3)
+        let chicken = makeFoodItem(name: "Peito de frango grelhado", cals: 165.0, prot: 31.0, carbs: 0.0, fat: 3.6)
+        let azeite = makeFoodItem(name: "Azeite de oliva extra virgem", cals: 884.0, prot: 0.0, carbs: 0.0, fat: 100.0)
+        let bread = makeFoodItem(name: "Pão francês", cals: 300.0, prot: 8.0, carbs: 58.0, fat: 3.0)
+        let eggs = makeFoodItem(name: "Ovos mexidos", cals: 150.0, prot: 12.0, carbs: 1.5, fat: 11.0)
+
+        // Café: Pão e Ovos
+        let b1 = PlannedMealItem(food: bread, amount: 50.0, unit: "g", calories: 150.0, proteinGrams: 4.0, carbsGrams: 29.0, fatGrams: 1.5, fiberGrams: 1.0)
+        let b2 = PlannedMealItem(food: eggs, amount: 100.0, unit: "g", calories: 150.0, proteinGrams: 12.0, carbsGrams: 1.5, fatGrams: 11.0, fiberGrams: 0.0)
+        let breakfast = makeMeal(mealType: .breakfast, name: "Café da Manhã", items: [b1, b2])
+
+        // Almoço com os 790g de arroz do screenshot
+        let l1 = PlannedMealItem(food: rice, amount: 790.0, unit: "g", calories: 1027.0, proteinGrams: 21.3, carbsGrams: 222.8, fatGrams: 2.4, fiberGrams: 4.0)
+        let l2 = PlannedMealItem(food: chicken, amount: 150.0, unit: "g", calories: 247.5, proteinGrams: 46.5, carbsGrams: 0.0, fatGrams: 5.4, fiberGrams: 0.0)
+        let l3 = PlannedMealItem(food: azeite, amount: 10.0, unit: "ml", calories: 88.4, proteinGrams: 0.0, carbsGrams: 0.0, fatGrams: 10.0, fiberGrams: 0.0)
+        let lunch = makeMeal(mealType: .lunch, name: "Almoço", items: [l1, l2, l3])
+
+        // Lanche com Aveia e Whey
+        let oats = makeFoodItem(name: "Aveia em flocos", cals: 360.0, prot: 14.0, carbs: 60.0, fat: 7.0)
+        let s1 = PlannedMealItem(food: oats, amount: 30.0, unit: "g", calories: 108.0, proteinGrams: 4.2, carbsGrams: 18.0, fatGrams: 2.1, fiberGrams: 3.0)
+        let snack = makeMeal(mealType: .afternoonSnack, name: "Lanche da Tarde", items: [s1])
+
+        // Jantar com porção tímida
+        let d1 = PlannedMealItem(food: rice, amount: 80.0, unit: "g", calories: 104.0, proteinGrams: 2.2, carbsGrams: 22.6, fatGrams: 0.2, fiberGrams: 0.4)
+        let d2 = PlannedMealItem(food: chicken, amount: 100.0, unit: "g", calories: 165.0, proteinGrams: 31.0, carbsGrams: 0.0, fatGrams: 3.6, fiberGrams: 0.0)
+        let dinner = makeMeal(mealType: .dinner, name: "Jantar", items: [d1, d2])
+
+        let uncalibratedPlan = makeTestPlan(meals: [breakfast, lunch, snack, dinner])
+
+        let target = NutritionTarget(
+            calories: 2200.0,
+            proteinGrams: 150.0,
+            carbsGrams: 240.0,
+            fatGrams: 60.0,
+            waterMl: 3000.0
+        )
+
+        // Executar a calibração automática global
+        let calibratedPlan = MealPlanAdjustmentEngine.autoRebalancePlan(plan: uncalibratedPlan, target: target)
+
+        // 1. Arroz do almoço não pode mais ser 790g, deve ter sido normalizado para <= 220g
+        let lunchRiceItem = calibratedPlan.meals[1].items[0]
+        XCTAssertLessThanOrEqual(lunchRiceItem.amount, 220.0, "Arroz do almoço deve respeitar o teto fisiológico de 220g")
+        XCTAssertGreaterThanOrEqual(lunchRiceItem.amount, 120.0)
+
+        // 2. Arroz do jantar deve ter recebido carboidratos de forma equilibrada (>= 100g)
+        let dinnerRiceItem = calibratedPlan.meals[3].items[0]
+        XCTAssertGreaterThanOrEqual(dinnerRiceItem.amount, 100.0, "Jantar deve ter porção de carboidrato equilibrada")
+        XCTAssertLessThanOrEqual(dinnerRiceItem.amount, 220.0)
+
+        // 3. Totais do plano rebalanceado devem estar alinhados com a meta diária (tolerância clínica)
+        XCTAssertEqual(calibratedPlan.totalCalories, target.calories, accuracy: 150.0)
+        XCTAssertEqual(calibratedPlan.totalProtein, target.proteinGrams, accuracy: 20.0)
+        XCTAssertEqual(calibratedPlan.totalCarbs, target.carbsGrams, accuracy: 30.0)
+    }
+
+    // MARK: - 9. Testar MealPlanStore.autoRebalanceActivePlan persistindo e sincronizando
+    func testMealPlanStoreAutoRebalance() {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_store_rebalance_\(UUID().uuidString).json")
+        let store = MealPlanStore(storageURL: tempURL)
+
+        let rice = makeFoodItem(name: "Arroz branco cozido", cals: 130.0, prot: 2.7, carbs: 28.2, fat: 0.3)
+        let l1 = PlannedMealItem(food: rice, amount: 790.0, unit: "g", calories: 1027.0, proteinGrams: 21.3, carbsGrams: 222.8, fatGrams: 2.4, fiberGrams: 4.0)
+        let lunch = makeMeal(mealType: .lunch, name: "Almoço", items: [l1])
+        let plan = makeTestPlan(meals: [lunch])
+
+        store.setActivePlan(plan)
+        XCTAssertEqual(store.activePlan?.meals[0].items[0].amount, 790.0)
+
+        let target = NutritionTarget(calories: 2000.0, proteinGrams: 150.0, carbsGrams: 220.0, fatGrams: 55.0, waterMl: 2800.0)
+        store.autoRebalanceActivePlan(target: target)
+
+        guard let rebalanced = store.activePlan else {
+            XCTFail("activePlan não deve ser nil")
+            return
+        }
+
+        XCTAssertLessThanOrEqual(rebalanced.meals[0].items[0].amount, 220.0)
+        XCTAssertLessThan(rebalanced.totalCalories, 1000.0)
     }
 }
