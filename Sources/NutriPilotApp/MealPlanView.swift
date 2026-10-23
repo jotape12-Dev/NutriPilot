@@ -14,6 +14,7 @@ public struct MealPlanView: View {
     @State private var selectedSegment: PlanViewSegment = .plan
     @State private var itemToSubstitute: SubstitutionTarget?
     @State private var isShowingImportSheet: Bool = false
+    @AppStorage("mealPlan_preferUnits") private var preferUnits: Bool = true
     @State private var assistantMessages: [AssistantChatMessage] = [
         AssistantChatMessage(
             text: "Sou o assistente de bolso NutriPilot.\nRespondo qualquer dúvida em no máximo 4 linhas diretas.\nSeu foco hoje é bater a meta de proteínas sem estourar calorias.",
@@ -91,6 +92,15 @@ public struct MealPlanView: View {
                                 }
                             } label: {
                                 Label("Calibrar Todas as Refeições", systemImage: "sparkles.rectangle.stack")
+                            }
+
+                            Button {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                    preferUnits.toggle()
+                                    hapticTrigger += 1
+                                }
+                            } label: {
+                                Label(preferUnits ? "Exibir Porções em Gramas (g)" : "Exibir Porções em Unidades", systemImage: preferUnits ? "scalemass" : "circle.grid.2x1")
                             }
 
                             Divider()
@@ -199,6 +209,25 @@ public struct MealPlanView: View {
                     if let report = planComplianceReport {
                         planComplianceCard(report: report)
                     }
+
+                    // Seletor de visualização de porções no cardápio
+                    HStack {
+                        HStack(spacing: 6) {
+                            Image(systemName: "fork.knife")
+                                .foregroundColor(.green)
+                            Text("REFEIÇÕES DO PLANO")
+                                .font(.caption.bold())
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Picker("Modo de Exibição", selection: $preferUnits) {
+                            Text("Unidades").tag(true)
+                            Text("Gramas").tag(false)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 160)
+                    }
+                    .padding(.top, 4)
 
                     // Lista de Refeições Planejadas do Core
                     ForEach(plan.meals) { meal in
@@ -678,15 +707,49 @@ public struct MealPlanView: View {
                             Text(item.food.name)
                                 .font(.subheadline.weight(.medium))
                             let portionText: String = {
-                                if let explicit = item.portionName, !explicit.isEmpty, explicit != "\(Int(item.amount))g" {
-                                    return "\(explicit) (\(Int(item.amount))g)"
+                                if preferUnits {
+                                    if let explicit = item.portionName, !explicit.isEmpty, explicit != "\(Int(item.amount))g" {
+                                        if explicit.contains("(\(Int(item.amount))g)") || explicit.contains("g)") {
+                                            return explicit
+                                        }
+                                        return "\(explicit) (\(Int(item.amount))g)"
+                                    } else if let ref = item.food.referenceUnitPortion, ref.gramWeight > 0 {
+                                        let u = item.amount / ref.gramWeight
+                                        let formattedU = abs(u.rounded() - u) < 0.15 ? "\(Int(u.rounded()))" : String(format: "%.1f", u)
+                                        let foodName = item.food.name.lowercased()
+                                        let isClara = foodName.contains("clara")
+                                        let isEgg = foodName.contains("ovo") && !isClara
+                                        let isSlice = ref.name.lowercased().contains("fatia") || foodName.contains("fatia")
+                                        let label: String = {
+                                            if isClara { return u > 1.05 ? "claras" : "clara" }
+                                            if isEgg { return u > 1.05 ? "ovos" : "ovo" }
+                                            if isSlice { return u > 1.05 ? "fatias" : "fatia" }
+                                            return u > 1.05 ? "unidades" : "unidade"
+                                        }()
+                                        return "\(formattedU) \(label) (\(Int(item.amount))g)"
+                                    } else {
+                                        return item.food.formattedPortion(amount: item.amount, preferUnits: true)
+                                    }
                                 } else {
-                                    return item.food.formattedPortion(amount: item.amount, preferUnits: true)
+                                    return "\(Int(item.amount))g"
                                 }
                             }()
-                            Text("\(portionText) • \(Int(item.calories)) kcal")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            Button {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                    preferUnits.toggle()
+                                    hapticTrigger += 1
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text(portionText)
+                                        .font(.caption.weight(.medium))
+                                        .foregroundColor(.primary)
+                                    Text("• \(Int(item.calories)) kcal")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
                         }
 
                         Spacer()
@@ -1156,22 +1219,48 @@ private struct FoodSubstitutionSheet: View {
     @State private var substitutes: [SubstitutionResult] = []
 
     private var unitPortion: FoodPortion? {
-        target.item.food.referenceUnitPortion
+        if let ref = target.item.food.referenceUnitPortion {
+            return ref
+        }
+        if let pName = target.item.portionName?.lowercased() {
+            if pName.contains("clara") {
+                return FoodPortion(name: "Clara", gramWeight: 33.0, description: "1 clara (33g)")
+            } else if pName.contains("ovo") {
+                return FoodPortion(name: "Unidade", gramWeight: 50.0, description: "1 ovo (50g)")
+            } else if pName.contains("fatia") {
+                return FoodPortion(name: "Fatia", gramWeight: 25.0, description: "1 fatia (25g)")
+            } else if pName.contains("unidade") || pName.contains("und") {
+                let weight = target.item.amount > 0 ? target.item.amount : 70.0
+                return FoodPortion(name: "Unidade", gramWeight: weight, description: "1 unidade (\(Int(weight))g)")
+            }
+        }
+        return nil
     }
+
+    private var unitNames: (single: String, plural: String, title: String) {
+        let foodName = target.item.food.name.lowercased()
+        let refName = unitPortion?.name.lowercased() ?? ""
+        let explicit = target.item.portionName?.lowercased() ?? ""
+
+        if foodName.contains("clara") || refName.contains("clara") || explicit.contains("clara") {
+            return (single: "clara", plural: "claras", title: "Claras")
+        }
+        if foodName.contains("ovo") || refName.contains("ovo") || explicit.contains("ovo") {
+            return (single: "ovo", plural: "ovos", title: "Ovos")
+        }
+        if refName.contains("fatia") || foodName.contains("fatia") || explicit.contains("fatia") {
+            return (single: "fatia", plural: "fatias", title: "Fatias")
+        }
+        return (single: "unidade", plural: "unidades", title: "Unidades")
+    }
+
+    private var unitLabelSingle: String { unitNames.single }
+    private var unitLabelPlural: String { unitNames.plural }
+    private var unitTitle: String { unitNames.title }
 
     private var currentUnitsValue: Double {
         guard let ref = unitPortion, ref.gramWeight > 0 else { return 1.0 }
         return (currentGrams / ref.gramWeight)
-    }
-
-    private var unitLabelSingle: String {
-        guard let ref = unitPortion else { return "unidade" }
-        return ref.name.localizedCaseInsensitiveContains("fatia") ? "fatia" : "unidade"
-    }
-
-    private var unitLabelPlural: String {
-        guard let ref = unitPortion else { return "unidades" }
-        return ref.name.localizedCaseInsensitiveContains("fatia") ? "fatias" : "unidades"
     }
 
     init(
@@ -1183,7 +1272,7 @@ private struct FoodSubstitutionSheet: View {
         self.planStore = planStore
         self.onConfirm = onConfirm
         self._currentGrams = State(initialValue: target.item.amount)
-        let initialUnitMode: UnitDisplayMode = target.item.food.referenceUnitPortion != nil ? .units : .grams
+        let initialUnitMode: UnitDisplayMode = (target.item.food.referenceUnitPortion != nil || target.item.portionName != nil) ? .units : .grams
         self._unitDisplayMode = State(initialValue: initialUnitMode)
     }
 
@@ -1239,7 +1328,7 @@ private struct FoodSubstitutionSheet: View {
             // Seletor de Modo de Exibição (Unidades vs Gramas) para alimentos que possuem porção unitária conhecida
             if unitPortion != nil {
                 Picker("Modo de Exibição", selection: $unitDisplayMode) {
-                    Text(unitLabelPlural.capitalized).tag(UnitDisplayMode.units)
+                    Text(unitTitle).tag(UnitDisplayMode.units)
                     Text("Gramas (g)").tag(UnitDisplayMode.grams)
                 }
                 .pickerStyle(.segmented)
@@ -1260,7 +1349,17 @@ private struct FoodSubstitutionSheet: View {
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Text(target.item.food.formattedPortion(amount: currentGrams, preferUnits: unitDisplayMode == .units))
+                    let formattedDisplay: String = {
+                        if unitDisplayMode == .units, unitPortion != nil {
+                            let u = currentUnitsValue
+                            let formattedU = abs(u.rounded() - u) < 0.15 ? "\(Int(u.rounded()))" : String(format: "%.1f", u)
+                            let lbl = u > 1.05 ? unitLabelPlural : unitLabelSingle
+                            return "\(formattedU) \(lbl) (\(Int(currentGrams))g)"
+                        } else {
+                            return "\(Int(currentGrams))g"
+                        }
+                    }()
+                    Text(formattedDisplay)
                         .font(.title2.bold())
                         .foregroundColor(.green)
                 }
@@ -1288,7 +1387,7 @@ private struct FoodSubstitutionSheet: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 if unitDisplayMode == .units, let ref = unitPortion {
-                    // Controle por Unidades / Fatias
+                    // Controle por Unidades / Fatias / Ovos / Claras
                     HStack {
                         Text("Porção:")
                             .font(.subheadline)
@@ -1342,7 +1441,7 @@ private struct FoodSubstitutionSheet: View {
                             .font(.subheadline)
                         Spacer()
                         Button {
-                            currentGrams = max(5.0, currentGrams - 5.0)
+                            currentGrams = max(5.0, currentGrams - 10.0)
                         } label: {
                             Image(systemName: "minus.circle.fill")
                                 .font(.title2)
@@ -1350,13 +1449,23 @@ private struct FoodSubstitutionSheet: View {
                         }
                         .buttonStyle(.plain)
 
-                        Text(String(format: "%.0fg", currentGrams))
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .frame(minWidth: 80)
-                            .multilineTextAlignment(.center)
+                        VStack(spacing: 2) {
+                            Text(String(format: "%.0fg", currentGrams))
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                            if let ref = unitPortion, ref.gramWeight > 0 {
+                                let u = currentUnitsValue
+                                let textU = abs(u.rounded() - u) < 0.15 ? "\(Int(u.rounded()))" : String(format: "%.1f", u)
+                                let lbl = u > 1.05 ? unitLabelPlural : unitLabelSingle
+                                Text("(≈ \(textU) \(lbl))")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .frame(minWidth: 90)
+                        .multilineTextAlignment(.center)
 
                         Button {
-                            currentGrams += 5.0
+                            currentGrams += 10.0
                         } label: {
                             Image(systemName: "plus.circle.fill")
                                 .font(.title2)
@@ -1383,7 +1492,7 @@ private struct FoodSubstitutionSheet: View {
             // Botão Salvar Nova Quantidade
             Button {
                 let portionLabel: String? = {
-                    if unitDisplayMode == .units, let ref = unitPortion {
+                    if unitDisplayMode == .units, unitPortion != nil {
                         let u = currentUnitsValue
                         let formattedU = abs(u.rounded() - u) < 0.15 ? "\(Int(u.rounded()))" : String(format: "%.1f", u)
                         let lbl = u > 1.05 ? unitLabelPlural : unitLabelSingle
@@ -1404,7 +1513,15 @@ private struct FoodSubstitutionSheet: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
-                    let savedText = target.item.food.formattedPortion(amount: currentGrams, preferUnits: unitDisplayMode == .units)
+                    let savedText: String = {
+                        if unitDisplayMode == .units, unitPortion != nil {
+                            let u = currentUnitsValue
+                            let formattedU = abs(u.rounded() - u) < 0.15 ? "\(Int(u.rounded()))" : String(format: "%.1f", u)
+                            let lbl = u > 1.05 ? unitLabelPlural : unitLabelSingle
+                            return "\(formattedU) \(lbl) (\(Int(currentGrams))g)"
+                        }
+                        return "\(Int(currentGrams))g"
+                    }()
                     Text("Salvar Nova Quantidade (\(savedText))")
                 }
                 .font(.headline)
@@ -1422,11 +1539,17 @@ private struct FoodSubstitutionSheet: View {
 
     private func quickUnitButton(units: Double, gramWeight: Double) -> some View {
         let isSelected = abs(currentUnitsValue - units) < 0.15
-        let label = units > 1 ? unitLabelPlural : unitLabelSingle
+        let buttonText: String = {
+            if unitLabelPlural == "unidades" {
+                return "\(Int(units)) un"
+            }
+            let label = units > 1 ? unitLabelPlural : unitLabelSingle
+            return "\(Int(units)) \(label)"
+        }()
         return Button {
             currentGrams = (units * gramWeight).rounded(to: 1)
         } label: {
-            Text("\(Int(units)) \(label)")
+            Text(buttonText)
                 .font(.caption.bold())
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
@@ -1596,7 +1719,24 @@ private struct FoodSubstitutionSheet: View {
                     // Botão Confirmar Substituição
                     Button {
                         let macros = chosen.substituteFood.calculatedFor(amount: substituteGrams)
-                        let pText = chosen.suggestedPortion ?? "\(Int(substituteGrams)) \(chosen.unit)"
+                        let pText: String? = {
+                            if let ref = chosen.substituteFood.referenceUnitPortion, ref.gramWeight > 0 {
+                                let u = substituteGrams / ref.gramWeight
+                                let formattedU = abs(u.rounded() - u) < 0.15 ? "\(Int(u.rounded()))" : String(format: "%.1f", u)
+                                let foodName = chosen.substituteFood.name.lowercased()
+                                let isClara = foodName.contains("clara")
+                                let isEgg = foodName.contains("ovo") && !isClara
+                                let isSlice = ref.name.lowercased().contains("fatia") || foodName.contains("fatia")
+                                let lbl: String = {
+                                    if isClara { return u > 1.05 ? "claras" : "clara" }
+                                    if isEgg { return u > 1.05 ? "ovos" : "ovo" }
+                                    if isSlice { return u > 1.05 ? "fatias" : "fatia" }
+                                    return u > 1.05 ? "unidades" : "unidade"
+                                }()
+                                return "\(formattedU) \(lbl)"
+                            }
+                            return chosen.suggestedPortion
+                        }()
                         let newItem = PlannedMealItem(
                             food: chosen.substituteFood,
                             amount: substituteGrams,
