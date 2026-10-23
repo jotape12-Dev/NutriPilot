@@ -5,16 +5,86 @@ import Observation
 public struct WaterReminderConfig: Codable, Sendable, Equatable {
     public var startHour: Int // Padrão 8 (08:00)
     public var endHour: Int   // Padrão 22 (22:00)
+    public var intervalHours: Int // Padrão 2 (intervalos a cada 2 horas)
     public var isEnabled: Bool
 
     public init(
         startHour: Int = 8,
         endHour: Int = 22,
+        intervalHours: Int = 2,
         isEnabled: Bool = true
     ) {
         self.startHour = startHour
         self.endHour = endHour
+        self.intervalHours = intervalHours
         self.isEnabled = isEnabled
+    }
+}
+
+/// Decomposição detalhada do ritmo fisiológico saudável de hidratação ao longo do dia.
+public struct WaterPacingBreakdown: Sendable, Equatable, Codable {
+    public let targetWaterMl: Double
+    public let startHour: Int
+    public let endHour: Int
+    public let intervalHours: Int
+    public let totalWindowHours: Int
+    public let healthyHourlyRateMl: Double
+    public let intervalTargetMl: Double
+    public let maxSafeHourlyRateMl: Double
+    public let currentConsumedMl: Double
+    public let expectedConsumedMl: Double
+    public let currentIntervalIndex: Int
+    public let totalIntervalsCount: Int
+    public let currentIntervalStartHour: Int
+    public let currentIntervalEndHour: Int
+    public let status: PacingStatus
+    public let deltaMl: Double
+    public let advice: String
+
+    public enum PacingStatus: String, Sendable, Equatable, Codable {
+        case onTrack = "No Ritmo Ideal"
+        case ahead = "Adiantado"
+        case behind = "Atrasado"
+        case targetAchieved = "Meta Atingida"
+        case outsideWindow = "Fora da Janela Ativa"
+    }
+
+    public init(
+        targetWaterMl: Double,
+        startHour: Int,
+        endHour: Int,
+        intervalHours: Int,
+        totalWindowHours: Int,
+        healthyHourlyRateMl: Double,
+        intervalTargetMl: Double,
+        maxSafeHourlyRateMl: Double,
+        currentConsumedMl: Double,
+        expectedConsumedMl: Double,
+        currentIntervalIndex: Int,
+        totalIntervalsCount: Int,
+        currentIntervalStartHour: Int,
+        currentIntervalEndHour: Int,
+        status: PacingStatus,
+        deltaMl: Double,
+        advice: String
+    ) {
+        self.targetWaterMl = targetWaterMl
+        self.startHour = startHour
+        self.endHour = endHour
+        self.intervalHours = intervalHours
+        self.totalWindowHours = totalWindowHours
+        self.healthyHourlyRateMl = healthyHourlyRateMl
+        self.intervalTargetMl = intervalTargetMl
+        self.maxSafeHourlyRateMl = maxSafeHourlyRateMl
+        self.currentConsumedMl = currentConsumedMl
+        self.expectedConsumedMl = expectedConsumedMl
+        self.currentIntervalIndex = currentIntervalIndex
+        self.totalIntervalsCount = totalIntervalsCount
+        self.currentIntervalStartHour = currentIntervalStartHour
+        self.currentIntervalEndHour = currentIntervalEndHour
+        self.status = status
+        self.deltaMl = deltaMl
+        self.advice = advice
     }
 }
 
@@ -212,6 +282,98 @@ public final class WaterStore: @unchecked Sendable {
             return true
         }
         return false
+    }
+
+    /// Atualiza as configurações de lembretes e ritmo diário de hidratação.
+    public func updateReminderConfig(startHour: Int? = nil, endHour: Int? = nil, intervalHours: Int? = nil, isEnabled: Bool? = nil) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        if let s = startHour { reminderConfig.startHour = s }
+        if let e = endHour { reminderConfig.endHour = e }
+        if let i = intervalHours { reminderConfig.intervalHours = i }
+        if let en = isEnabled { reminderConfig.isEnabled = en }
+        persistToDisk()
+    }
+
+    /// Calcula a análise aprofundada de ritmo fisiológico saudável para o dia e intervalo atual.
+    public func pacingBreakdown(at date: Date = Date(), targetWaterMl: Double, config: WaterReminderConfig? = nil) -> WaterPacingBreakdown {
+        let activeConfig = config ?? self.reminderConfig
+        let windowHours = max(1, activeConfig.endHour - activeConfig.startHour)
+        let intervalHours = max(1, activeConfig.intervalHours)
+        let totalIntervals = max(1, windowHours / intervalHours)
+        let hourlyRate = (targetWaterMl / Double(windowHours)).rounded(to: 1)
+        let intervalTarget = (hourlyRate * Double(intervalHours)).rounded(to: 1)
+        let maxSafeHourlyRate: Double = 800.0 // Limite de filtração renal seguro
+
+        let consumed = totalWaterMl(for: date)
+        let expected = expectedWaterMl(at: date, targetWaterMl: targetWaterMl, config: activeConfig)
+        let delta = (consumed - expected).rounded(to: 1)
+
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: date)
+        let minute = calendar.component(.minute, from: date)
+        let currentTime = Double(hour) + (Double(minute) / 60.0)
+
+        let currentIntervalIdx: Int
+        let intervalStart: Int
+        let intervalEnd: Int
+
+        if currentTime < Double(activeConfig.startHour) {
+            currentIntervalIdx = 1
+            intervalStart = activeConfig.startHour
+            intervalEnd = min(activeConfig.endHour, activeConfig.startHour + intervalHours)
+        } else if currentTime >= Double(activeConfig.endHour) {
+            currentIntervalIdx = totalIntervals
+            intervalStart = max(activeConfig.startHour, activeConfig.endHour - intervalHours)
+            intervalEnd = activeConfig.endHour
+        } else {
+            let elapsed = currentTime - Double(activeConfig.startHour)
+            let idx = Int(elapsed / Double(intervalHours)) + 1
+            currentIntervalIdx = min(totalIntervals, max(1, idx))
+            intervalStart = activeConfig.startHour + ((currentIntervalIdx - 1) * intervalHours)
+            intervalEnd = min(activeConfig.endHour, intervalStart + intervalHours)
+        }
+
+        let status: WaterPacingBreakdown.PacingStatus
+        let advice: String
+
+        if consumed >= targetWaterMl {
+            status = .targetAchieved
+            advice = "Meta diária de hidratação concluída! Mantenha apenas goles moderados."
+        } else if !isWithinNotificationWindow(at: date, config: activeConfig) {
+            status = .outsideWindow
+            advice = "Janela de vigília em repouso (\(activeConfig.startHour):00 às \(activeConfig.endHour):00). Evite grandes volumes de água antes de dormir."
+        } else if delta < -80 {
+            status = .behind
+            advice = "Abaixo do ritmo (- \(Int(abs(delta))) ml). Beba um copo de água (~250ml) para manter o equilíbrio celular."
+        } else if delta > 80 {
+            status = .ahead
+            advice = "Excelente ritmo! Você está +\(Int(delta)) ml à frente do esperado para este horário."
+        } else {
+            status = .onTrack
+            advice = "Ritmo saudável perfeito! Taxa fisiológica estável em ~\(Int(hourlyRate)) ml/h."
+        }
+
+        return WaterPacingBreakdown(
+            targetWaterMl: targetWaterMl,
+            startHour: activeConfig.startHour,
+            endHour: activeConfig.endHour,
+            intervalHours: intervalHours,
+            totalWindowHours: windowHours,
+            healthyHourlyRateMl: hourlyRate,
+            intervalTargetMl: intervalTarget,
+            maxSafeHourlyRateMl: maxSafeHourlyRate,
+            currentConsumedMl: consumed,
+            expectedConsumedMl: expected,
+            currentIntervalIndex: currentIntervalIdx,
+            totalIntervalsCount: totalIntervals,
+            currentIntervalStartHour: intervalStart,
+            currentIntervalEndHour: intervalEnd,
+            status: status,
+            deltaMl: delta,
+            advice: advice
+        )
     }
 
     // MARK: - Persistência JSON

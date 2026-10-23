@@ -16,6 +16,8 @@ public struct ProfileSettingsView: View {
     @State private var sex: BiologicalSex
     @State private var heightCm: Double
     @State private var weightKg: Double
+    @State private var heightText: String
+    @State private var weightText: String
     @State private var activityLevel: ActivityLevel
     @State private var goal: NutritionGoal
     @State private var preferredMealsPerDay: Int
@@ -49,6 +51,8 @@ public struct ProfileSettingsView: View {
         _sex = State(initialValue: p.sex)
         _heightCm = State(initialValue: p.heightCm)
         _weightKg = State(initialValue: p.currentWeightKg)
+        _heightText = State(initialValue: String(format: "%.0f", p.heightCm))
+        _weightText = State(initialValue: String(format: "%.1f", p.currentWeightKg))
         _activityLevel = State(initialValue: p.activityLevel)
         _goal = State(initialValue: p.goal)
         _preferredMealsPerDay = State(initialValue: p.preferredMealsPerDay)
@@ -164,17 +168,46 @@ public struct ProfileSettingsView: View {
 
     // MARK: - 2. Biometria
     private var biometricsSection: some View {
-        Section(header: Text("Biometria")) {
-            Picker("Altura", selection: $heightCm) {
-                ForEach(130...230, id: \.self) { cm in
-                    Text("\(cm) cm").tag(Double(cm))
-                }
+        Section(
+            header: Text("Biometria"),
+            footer: Text("Digite sua altura e peso diretamente para recalcular instantaneamente a TMB e metas.")
+        ) {
+            HStack {
+                Text("Altura")
+                Spacer()
+                TextField("Ex: 178", text: $heightText)
+                    #if os(iOS)
+                    .keyboardType(.decimalPad)
+                    #endif
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 100)
+                    .onChange(of: heightText) { _, newVal in
+                        let cleaned = newVal.replacingOccurrences(of: ",", with: ".")
+                        if let val = Double(cleaned), val >= 100 && val <= 250 {
+                            heightCm = val
+                        }
+                    }
+                Text("cm")
+                    .foregroundColor(.secondary)
             }
 
-            Picker("Peso Atual", selection: $weightKg) {
-                ForEach(Array(stride(from: 35.0, through: 200.0, by: 0.5)), id: \.self) { kg in
-                    Text(String(format: "%.1f kg", kg)).tag(kg)
-                }
+            HStack {
+                Text("Peso Atual")
+                Spacer()
+                TextField("Ex: 78.5", text: $weightText)
+                    #if os(iOS)
+                    .keyboardType(.decimalPad)
+                    #endif
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 100)
+                    .onChange(of: weightText) { _, newVal in
+                        let cleaned = newVal.replacingOccurrences(of: ",", with: ".")
+                        if let val = Double(cleaned), val >= 30 && val <= 300 {
+                            weightKg = val
+                        }
+                    }
+                Text("kg")
+                    .foregroundColor(.secondary)
             }
         }
     }
@@ -340,6 +373,15 @@ public struct ProfileSettingsView: View {
     }
 
     private func saveChanges() {
+        let cleanH = heightText.replacingOccurrences(of: ",", with: ".")
+        if let valH = Double(cleanH), valH >= 100 && valH <= 250 {
+            heightCm = valH
+        }
+        let cleanW = weightText.replacingOccurrences(of: ",", with: ".")
+        if let valW = Double(cleanW), valW >= 30 && valW <= 300 {
+            weightKg = valW
+        }
+
         profileStore.updateProfile(
             name: name,
             birthDate: birthDate,

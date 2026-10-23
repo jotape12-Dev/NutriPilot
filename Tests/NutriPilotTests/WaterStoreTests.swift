@@ -136,4 +136,52 @@ final class WaterStoreTests: XCTestCase {
         XCTAssertEqual(reloadedStore.logs.count, 1)
         XCTAssertEqual(reloadedStore.totalWaterMl(for: now), 750)
     }
+
+    func testWaterPacingBreakdownCalculations() {
+        let calendar = Calendar.current
+        var components = calendar.dateComponents([.year, .month, .day], from: Date())
+        // 14:00 (metade de 08:00 às 22:00 = 6 horas transcorridas de 14h)
+        components.hour = 14
+        components.minute = 0
+        let dateAt14 = calendar.date(from: components)!
+
+        let target = 2800.0 // 2800 / 14 = 200 ml/h
+        let pacing = store.pacingBreakdown(at: dateAt14, targetWaterMl: target)
+
+        XCTAssertEqual(pacing.totalWindowHours, 14)
+        XCTAssertEqual(pacing.healthyHourlyRateMl, 200.0)
+        XCTAssertEqual(pacing.intervalHours, 2)
+        XCTAssertEqual(pacing.intervalTargetMl, 400.0) // 2h * 200 ml/h = 400 ml
+        XCTAssertEqual(pacing.totalIntervalsCount, 7) // 14 / 2 = 7 intervalos
+        XCTAssertEqual(pacing.currentIntervalIndex, 4) // Intervalo 4 (14h às 16h)
+        XCTAssertEqual(pacing.currentIntervalStartHour, 14)
+        XCTAssertEqual(pacing.currentIntervalEndHour, 16)
+        XCTAssertEqual(pacing.expectedConsumedMl, 1200.0) // 6 horas * 200 ml/h = 1200 ml
+
+        // Sem ingestão -> Status behind
+        XCTAssertEqual(pacing.status, .behind)
+        XCTAssertEqual(pacing.deltaMl, -1200.0)
+        XCTAssertTrue(pacing.advice.contains("Abaixo do ritmo"))
+    }
+
+    func testWaterPacingBreakdownOnTrackAndTargetAchieved() {
+        let calendar = Calendar.current
+        var components = calendar.dateComponents([.year, .month, .day], from: Date())
+        components.hour = 15
+        components.minute = 0
+        let midDay = calendar.date(from: components)!
+
+        let target = 2800.0
+        // Esperado às 15h = 7h transcorridas * 200 = 1400 ml
+        store.addLog(amountMl: 1420, date: midDay)
+
+        let pacingOnTrack = store.pacingBreakdown(at: midDay, targetWaterMl: target)
+        XCTAssertEqual(pacingOnTrack.status, .onTrack)
+        XCTAssertTrue(pacingOnTrack.advice.contains("perfeito"))
+
+        // Meta atingida
+        store.addLog(amountMl: 1500, date: midDay) // Total 2920 >= 2800
+        let pacingAchieved = store.pacingBreakdown(at: midDay, targetWaterMl: target)
+        XCTAssertEqual(pacingAchieved.status, .targetAchieved)
+    }
 }

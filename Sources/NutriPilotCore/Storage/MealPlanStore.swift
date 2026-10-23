@@ -126,7 +126,7 @@ public final class MealPlanStore: @unchecked Sendable {
         setActivePlan(updatedPlan)
     }
 
-    public func updateItemAmount(mealId: UUID, itemId: UUID, newAmount: Double) {
+    public func updateItemAmount(mealId: UUID, itemId: UUID, newAmount: Double, portionName: String? = nil) {
         lock.lock()
         defer { lock.unlock() }
 
@@ -140,12 +140,19 @@ public final class MealPlanStore: @unchecked Sendable {
         let validAmount = max(1.0, newAmount.rounded(to: 1))
         let calc = oldItem.food.calculatedFor(amount: validAmount)
 
+        let resolvedPortionName: String? = {
+            if let explicit = portionName {
+                return explicit
+            }
+            return abs(validAmount - oldItem.amount) < 0.1 ? oldItem.portionName : nil
+        }()
+
         updatedItems[itemIdx] = PlannedMealItem(
             id: oldItem.id,
             food: oldItem.food,
             amount: validAmount,
             unit: oldItem.unit,
-            portionName: abs(validAmount - oldItem.amount) < 0.1 ? oldItem.portionName : nil,
+            portionName: resolvedPortionName,
             calories: calc.calories,
             proteinGrams: calc.protein,
             carbsGrams: calc.carbs,

@@ -31,12 +31,16 @@ public struct WaterView: View {
         store.reminderStatus(at: Date(), targetWaterMl: targetWaterMl)
     }
 
+    private var pacingBreakdown: WaterPacingBreakdown {
+        store.pacingBreakdown(at: Date(), targetWaterMl: targetWaterMl)
+    }
+
     public var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Badge de Ritmo / Pacing (Nutrium Style)
-                    pacingBadgeView
+                    // Card Completo de Ritmo Saudável de Hidratação & Lembretes
+                    healthyPacingCard
                         .padding(.top, 8)
                         .padding(.horizontal)
 
@@ -121,51 +125,159 @@ public struct WaterView: View {
         .padding(.vertical, 10)
     }
 
-    private var pacingBadgeView: some View {
-        HStack(spacing: 8) {
-            switch pacingStatus {
-            case .targetAchieved:
-                Image(systemName: "checkmark.seal.fill")
-                    .foregroundColor(.green)
-                Text("Meta diária atingida com sucesso!")
-                    .font(.subheadline.bold())
-                    .foregroundColor(.green)
+    private var healthyPacingCard: some View {
+        let pacing = pacingBreakdown
+        let statusColor: Color = {
+            switch pacing.status {
+            case .targetAchieved, .onTrack: return .green
+            case .behind: return .orange
+            case .ahead: return .blue
+            case .outsideWindow: return .secondary
+            }
+        }()
 
-            case .onTrack:
-                Image(systemName: "gauge.with.dots.needle.50percent")
-                    .foregroundColor(.blue)
-                Text("Ritmo ideal mantido no dia (Nutrium Pacing)")
-                    .font(.subheadline.bold())
-                    .foregroundColor(.blue)
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "gauge.with.dots.needle.50percent")
+                        .foregroundColor(statusColor)
+                    Text("RITMO SAUDÁVEL (PACING)")
+                        .font(.caption.bold())
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Text(pacing.status.rawValue)
+                    .font(.caption2.bold())
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(statusColor.opacity(0.12))
+                    .foregroundColor(statusColor)
+                    .clipShape(Capsule())
+            }
 
-            case .reminderNeeded(_, _, let deficit):
-                Image(systemName: "exclamationmark.circle.fill")
-                    .foregroundColor(.orange)
-                Text("Abaixo do ritmo (- \(Int(deficit)) ml). Beba um copo!")
-                    .font(.subheadline.bold())
-                    .foregroundColor(.orange)
+            // Estatísticas fisiológicas do ritmo
+            HStack(spacing: 8) {
+                pacingMetricBox(
+                    title: "Taxa Fisiológica",
+                    value: "\(Int(pacing.healthyHourlyRateMl))",
+                    unit: "ml/hora",
+                    color: .cyan
+                )
 
-            case .outsideWindow:
-                Image(systemName: "moon.stars.fill")
-                    .foregroundColor(.secondary)
-                Text("Fora da janela diária ativa (08:00 às 22:00)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                pacingMetricBox(
+                    title: "Intervalo Atual",
+                    value: "\(Int(pacing.intervalTargetMl))",
+                    unit: "\(pacing.currentIntervalStartHour)h - \(pacing.currentIntervalEndHour)h",
+                    color: .blue
+                )
 
-            case .disabled:
-                Image(systemName: "bell.slash.fill")
-                    .foregroundColor(.secondary)
-                Text("Lembretes inteligentes desligados")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                pacingMetricBox(
+                    title: "Esperado Agora",
+                    value: "\(Int(pacing.expectedConsumedMl))",
+                    unit: "ml acumulados",
+                    color: statusColor
+                )
+            }
+
+            // Conselho clínico / orientador
+            Text(pacing.advice)
+                .font(.footnote)
+                .foregroundColor(.primary)
+                .padding(.top, 2)
+
+            Divider()
+
+            // Controle de Notificações com Opt-in
+            VStack(spacing: 10) {
+                Toggle(isOn: Binding(
+                    get: { store.reminderConfig.isEnabled },
+                    set: { enabled in
+                        handleReminderToggle(enabled)
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Avisos Inteligentes de Intervalo")
+                            .font(.subheadline.bold())
+                        Text("Notifica a cada intervalo para beber no ritmo saudável")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .tint(.cyan)
+
+                if store.reminderConfig.isEnabled {
+                    HStack {
+                        Text("Frequência dos Avisos:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Picker("Frequência", selection: Binding(
+                            get: { store.reminderConfig.intervalHours },
+                            set: { newInterval in
+                                store.updateReminderConfig(intervalHours: newInterval)
+                                WaterNotificationScheduler.shared.scheduleIntervalReminders(
+                                    targetWaterMl: targetWaterMl,
+                                    store: store
+                                )
+                                hapticTrigger += 1
+                            }
+                        )) {
+                            Text("A cada 1h").tag(1)
+                            Text("A cada 2h").tag(2)
+                            Text("A cada 3h").tag(3)
+                        }
+                        .pickerStyle(.menu)
+                        .font(.caption.bold())
+                    }
+                }
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 14)
+        .padding(16)
         .background(Color.appCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(0.03), radius: 3, y: 1)
+    }
+
+    private func pacingMetricBox(title: String, value: String, unit: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+            Text(value)
+                .font(.subheadline.bold())
+                .foregroundColor(color)
+            Text(unit)
+                .font(.system(size: 9))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(color.opacity(0.08))
+        .cornerRadius(10)
+    }
+
+    private func handleReminderToggle(_ enabled: Bool) {
+        if enabled {
+            Task {
+                let granted = await WaterNotificationScheduler.shared.requestAuthorization()
+                await MainActor.run {
+                    store.updateReminderConfig(isEnabled: granted)
+                    if granted {
+                        WaterNotificationScheduler.shared.scheduleIntervalReminders(
+                            targetWaterMl: targetWaterMl,
+                            store: store
+                        )
+                    }
+                    hapticTrigger += 1
+                }
+            }
+        } else {
+            store.updateReminderConfig(isEnabled: false)
+            WaterNotificationScheduler.shared.cancelAllReminders()
+            hapticTrigger += 1
+        }
     }
 
     private var quickButtonsSection: some View {

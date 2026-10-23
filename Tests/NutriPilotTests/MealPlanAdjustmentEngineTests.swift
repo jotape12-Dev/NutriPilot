@@ -386,4 +386,52 @@ final class MealPlanAdjustmentEngineTests: XCTestCase {
         XCTAssertLessThanOrEqual(rebalanced.meals[0].items[0].amount, 220.0)
         XCTAssertLessThan(rebalanced.totalCalories, 1000.0)
     }
+
+    // MARK: - 10. Testar conversão e formatação de frutas e alimentos unitários
+    func testFoodItemUnitConversionsForFruitsAndHouseholdItems() {
+        let banana = makeFoodItem(name: "Banana prata crua", cals: 89.0, prot: 1.1, carbs: 22.8, fat: 0.3)
+        XCTAssertNotNil(banana.referenceUnitPortion)
+        XCTAssertEqual(banana.referenceUnitPortion?.gramWeight, 70.0)
+
+        // 140g de banana -> 2 unidades
+        let units = banana.unitsForAmount(140.0)
+        XCTAssertEqual(units, 2.0)
+
+        let formattedPreferUnits = banana.formattedPortion(amount: 140.0, preferUnits: true)
+        XCTAssertEqual(formattedPreferUnits, "2 unidades (140g)")
+
+        let formattedPreferGrams = banana.formattedPortion(amount: 140.0, preferUnits: false)
+        XCTAssertEqual(formattedPreferGrams, "140g")
+
+        // Ovo -> 1 unidade = 50g
+        let egg = makeFoodItem(name: "Ovo de galinha cozido", cals: 155.0, prot: 13.0, carbs: 1.1, fat: 10.6)
+        XCTAssertEqual(egg.formattedPortion(amount: 100.0, preferUnits: true), "2 unidades (100g)")
+
+        // Pão de forma -> 2 fatias = 50g
+        let bread = makeFoodItem(name: "Pão de forma integral", cals: 247.0, prot: 9.4, carbs: 45.0, fat: 3.5)
+        XCTAssertEqual(bread.formattedPortion(amount: 50.0, preferUnits: true), "2 fatias (50g)")
+    }
+
+    // MARK: - 11. Testar MealPlanStore.updateItemAmount com portionName explícito
+    func testMealPlanStoreUpdateItemAmountWithExplicitPortionName() {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_store_portion_\(UUID().uuidString).json")
+        let store = MealPlanStore(storageURL: tempURL)
+
+        let banana = makeFoodItem(name: "Banana prata crua", cals: 89.0, prot: 1.1, carbs: 22.8, fat: 0.3)
+        let itemId = UUID()
+        let item = PlannedMealItem(id: itemId, food: banana, amount: 70.0, unit: "g", calories: 62.0, proteinGrams: 0.8, carbsGrams: 16.0, fatGrams: 0.2, fiberGrams: 1.4)
+        let mealId = UUID()
+        let meal = makeMeal(id: mealId, mealType: .afternoonSnack, name: "Lanche", items: [item])
+        let plan = makeTestPlan(meals: [meal])
+
+        store.setActivePlan(plan)
+
+        // Atualiza para 140g com porção "2 unidades"
+        store.updateItemAmount(mealId: mealId, itemId: itemId, newAmount: 140.0, portionName: "2 unidades")
+
+        let updatedItem = store.activePlan?.meals[0].items[0]
+        XCTAssertEqual(updatedItem?.amount, 140.0)
+        XCTAssertEqual(updatedItem?.portionName, "2 unidades")
+        XCTAssertEqual(updatedItem?.calories ?? 0, 124.6, accuracy: 1.0)
+    }
 }

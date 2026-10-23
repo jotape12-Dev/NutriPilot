@@ -14,6 +14,7 @@
 		21E9CF8DF376EB00DA5F08AF /* BioimpedanceAnalysisSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8F8C63845145E8F6E99419 /* BioimpedanceAnalysisSheet.swift */; };
 		245ABDBF981B3A10340850D7 /* MealPlanAdjustmentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFC540E2F577E3966FAB0E93 /* MealPlanAdjustmentEngine.swift */; };
 		2A81951E2C16C067BCE1128C /* FoodSearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C801680CAB2E442D0F2A83C /* FoodSearchEngine.swift */; };
+		366DD3BF2195575A15FE3A9B /* WaterNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E2EA92223718694304535D /* WaterNotificationScheduler.swift */; };
 		3A9A518982632C0A7C059916 /* MealPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6521F2E0F35B5DCFE9EC2F1A /* MealPlanView.swift */; };
 		3C2C08B984ADF7E0622A9B29 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E1CD691C4D69A224C74EF5F /* RootView.swift */; };
 		3CBDC482E860A56821A67DD2 /* MealPlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2840C6CED943C36889997ABF /* MealPlanStore.swift */; };
@@ -63,6 +64,7 @@
 		33D44FA03F6339A3116D169B /* NutritionCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionCalculator.swift; sourceTree = "<group>"; };
 		3DB0B8C69EC3F70B6B0E21C1 /* FoodSubstitutionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodSubstitutionEngine.swift; sourceTree = "<group>"; };
 		3F925E38527D516FD6696BAE /* MealPlanGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanGenerator.swift; sourceTree = "<group>"; };
+		40E2EA92223718694304535D /* WaterNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterNotificationScheduler.swift; sourceTree = "<group>"; };
 		46BEF6B2159841EBBD3F1BB7 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		481604DF813BA343CA10025B /* MealPlanComplianceEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanComplianceEvaluator.swift; sourceTree = "<group>"; };
 		4BB090A702E8772CEB926B55 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
@@ -105,6 +107,7 @@
 				E76B4F0BACA61E96B2FEF70E /* ProfileSettingsView.swift */,
 				70D1B5BEDED968B1CD167E71 /* ReportExportView.swift */,
 				9E1CD691C4D69A224C74EF5F /* RootView.swift */,
+				40E2EA92223718694304535D /* WaterNotificationScheduler.swift */,
 				CFB04DDE1C86C5E06957C109 /* WaterView.swift */,
 				CE0FCF6905E78609943B4EF1 /* Theme */,
 			);
@@ -331,6 +334,7 @@
 				BA2CE3C5D12517B54C98C7F6 /* TBCAFoodDatabase.swift in Sources */,
 				D507268D3D3491026F23D8EF /* UserProfile.swift in Sources */,
 				7A06FD322FAF9863DB9E7CCC /* WaterLog.swift in Sources */,
+				366DD3BF2195575A15FE3A9B /* WaterNotificationScheduler.swift in Sources */,
 				EF383A07D95377651F46521D /* WaterStore.swift in Sources */,
 				D2895828707211FE560421AE /* WaterView.swift in Sources */,
 				6D86F65ABEF3B5CABE2EDE3D /* WeightTrendCalculator.swift in Sources */,

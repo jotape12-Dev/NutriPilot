@@ -677,8 +677,14 @@ public struct MealPlanView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.food.name)
                                 .font(.subheadline.weight(.medium))
-                            let portionText = item.portionName ?? "\(Int(item.amount)) \(item.unit)"
-                            Text("\(portionText) (\(Int(item.amount))g) • \(Int(item.calories)) kcal")
+                            let portionText: String = {
+                                if let explicit = item.portionName, !explicit.isEmpty, explicit != "\(Int(item.amount))g" {
+                                    return "\(explicit) (\(Int(item.amount))g)"
+                                } else {
+                                    return item.food.formattedPortion(amount: item.amount, preferUnits: true)
+                                }
+                            }()
+                            Text("\(portionText) • \(Int(item.calories)) kcal")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -1135,11 +1141,38 @@ private struct FoodSubstitutionSheet: View {
         var id: String { rawValue }
     }
 
+    private enum UnitDisplayMode: String, CaseIterable, Identifiable {
+        case units = "Unidades"
+        case grams = "Gramas (g)"
+
+        var id: String { rawValue }
+    }
+
     @State private var mode: SheetMode = .adjustPortion
+    @State private var unitDisplayMode: UnitDisplayMode = .grams
     @State private var currentGrams: Double
     @State private var selectedIndex: Int = 0
     @State private var substituteGrams: Double = 0.0
     @State private var substitutes: [SubstitutionResult] = []
+
+    private var unitPortion: FoodPortion? {
+        target.item.food.referenceUnitPortion
+    }
+
+    private var currentUnitsValue: Double {
+        guard let ref = unitPortion, ref.gramWeight > 0 else { return 1.0 }
+        return (currentGrams / ref.gramWeight)
+    }
+
+    private var unitLabelSingle: String {
+        guard let ref = unitPortion else { return "unidade" }
+        return ref.name.localizedCaseInsensitiveContains("fatia") ? "fatia" : "unidade"
+    }
+
+    private var unitLabelPlural: String {
+        guard let ref = unitPortion else { return "unidades" }
+        return ref.name.localizedCaseInsensitiveContains("fatia") ? "fatias" : "unidades"
+    }
 
     init(
         target: SubstitutionTarget,
@@ -1150,6 +1183,8 @@ private struct FoodSubstitutionSheet: View {
         self.planStore = planStore
         self.onConfirm = onConfirm
         self._currentGrams = State(initialValue: target.item.amount)
+        let initialUnitMode: UnitDisplayMode = target.item.food.referenceUnitPortion != nil ? .units : .grams
+        self._unitDisplayMode = State(initialValue: initialUnitMode)
     }
 
     var body: some View {
@@ -1201,6 +1236,15 @@ private struct FoodSubstitutionSheet: View {
         let macros = target.item.food.calculatedFor(amount: currentGrams)
 
         return VStack(spacing: 16) {
+            // Seletor de Modo de Exibição (Unidades vs Gramas) para alimentos que possuem porção unitária conhecida
+            if unitPortion != nil {
+                Picker("Modo de Exibição", selection: $unitDisplayMode) {
+                    Text(unitLabelPlural.capitalized).tag(UnitDisplayMode.units)
+                    Text("Gramas (g)").tag(UnitDisplayMode.grams)
+                }
+                .pickerStyle(.segmented)
+            }
+
             // Card do Alimento Atual
             VStack(alignment: .leading, spacing: 10) {
                 Text("ALIMENTO SELECIONADO")
@@ -1216,7 +1260,7 @@ private struct FoodSubstitutionSheet: View {
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Text("\(Int(currentGrams))g")
+                    Text(target.item.food.formattedPortion(amount: currentGrams, preferUnits: unitDisplayMode == .units))
                         .font(.title2.bold())
                         .foregroundColor(.green)
                 }
@@ -1243,41 +1287,92 @@ private struct FoodSubstitutionSheet: View {
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                HStack {
-                    Text("Quantidade:")
-                        .font(.subheadline)
-                    Spacer()
-                    Button {
-                        currentGrams = max(5.0, currentGrams - 5.0)
-                    } label: {
-                        Image(systemName: "minus.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
+                if unitDisplayMode == .units, let ref = unitPortion {
+                    // Controle por Unidades / Fatias
+                    HStack {
+                        Text("Porção:")
+                            .font(.subheadline)
+                        Spacer()
+                        Button {
+                            let nextUnits = max(0.5, currentUnitsValue - 1.0)
+                            currentGrams = (nextUnits * ref.gramWeight).rounded(to: 1)
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
 
-                    Text(String(format: "%.0fg", currentGrams))
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .frame(minWidth: 80)
+                        VStack(spacing: 2) {
+                            let u = currentUnitsValue
+                            let textU = abs(u.rounded() - u) < 0.15 ? "\(Int(u.rounded()))" : String(format: "%.1f", u)
+                            let label = u > 1.05 ? unitLabelPlural : unitLabelSingle
+                            Text("\(textU) \(label)")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                            Text("(≈ \(Int(currentGrams))g)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(minWidth: 120)
                         .multilineTextAlignment(.center)
 
-                    Button {
-                        currentGrams += 5.0
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.green)
+                        Button {
+                            let nextUnits = currentUnitsValue + 1.0
+                            currentGrams = (nextUnits * ref.gramWeight).rounded(to: 1)
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.green)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                }
-                .padding(.vertical, 4)
+                    .padding(.vertical, 4)
 
-                // Botões Rápidos de Ajuste
-                HStack(spacing: 10) {
-                    quickAdjustButton(delta: -50)
-                    quickAdjustButton(delta: -20)
-                    quickAdjustButton(delta: +20)
-                    quickAdjustButton(delta: +50)
+                    // Botões Rápidos por Unidade
+                    HStack(spacing: 10) {
+                        quickUnitButton(units: 1, gramWeight: ref.gramWeight)
+                        quickUnitButton(units: 2, gramWeight: ref.gramWeight)
+                        quickUnitButton(units: 3, gramWeight: ref.gramWeight)
+                        quickUnitButton(units: 4, gramWeight: ref.gramWeight)
+                    }
+                } else {
+                    // Controle Tradicional por Gramas
+                    HStack {
+                        Text("Quantidade:")
+                            .font(.subheadline)
+                        Spacer()
+                        Button {
+                            currentGrams = max(5.0, currentGrams - 5.0)
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+
+                        Text(String(format: "%.0fg", currentGrams))
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .frame(minWidth: 80)
+                            .multilineTextAlignment(.center)
+
+                        Button {
+                            currentGrams += 5.0
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.green)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, 4)
+
+                    // Botões Rápidos de Ajuste
+                    HStack(spacing: 10) {
+                        quickAdjustButton(delta: -50)
+                        quickAdjustButton(delta: -20)
+                        quickAdjustButton(delta: +20)
+                        quickAdjustButton(delta: +50)
+                    }
                 }
             }
             .padding(16)
@@ -1287,18 +1382,30 @@ private struct FoodSubstitutionSheet: View {
 
             // Botão Salvar Nova Quantidade
             Button {
+                let portionLabel: String? = {
+                    if unitDisplayMode == .units, let ref = unitPortion {
+                        let u = currentUnitsValue
+                        let formattedU = abs(u.rounded() - u) < 0.15 ? "\(Int(u.rounded()))" : String(format: "%.1f", u)
+                        let lbl = u > 1.05 ? unitLabelPlural : unitLabelSingle
+                        return "\(formattedU) \(lbl)"
+                    }
+                    return nil
+                }()
+
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                     planStore.updateItemAmount(
                         mealId: target.mealId,
                         itemId: target.item.id,
-                        newAmount: currentGrams
+                        newAmount: currentGrams,
+                        portionName: portionLabel
                     )
                 }
                 dismiss()
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
-                    Text("Salvar Nova Quantidade (\(Int(currentGrams))g)")
+                    let savedText = target.item.food.formattedPortion(amount: currentGrams, preferUnits: unitDisplayMode == .units)
+                    Text("Salvar Nova Quantidade (\(savedText))")
                 }
                 .font(.headline)
                 .foregroundColor(.white)
@@ -1311,6 +1418,23 @@ private struct FoodSubstitutionSheet: View {
             .padding(.top, 4)
         }
         .padding(.horizontal)
+    }
+
+    private func quickUnitButton(units: Double, gramWeight: Double) -> some View {
+        let isSelected = abs(currentUnitsValue - units) < 0.15
+        let label = units > 1 ? unitLabelPlural : unitLabelSingle
+        return Button {
+            currentGrams = (units * gramWeight).rounded(to: 1)
+        } label: {
+            Text("\(Int(units)) \(label)")
+                .font(.caption.bold())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.green.opacity(0.18) : Color.appBackground)
+                .foregroundColor(isSelected ? .green : .secondary)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
     }
 
     private func quickAdjustButton(delta: Double) -> some View {
