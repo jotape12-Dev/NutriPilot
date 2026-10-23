@@ -145,7 +145,7 @@ public final class MealPlanStore: @unchecked Sendable {
             food: oldItem.food,
             amount: validAmount,
             unit: oldItem.unit,
-            portionName: oldItem.portionName,
+            portionName: abs(validAmount - oldItem.amount) < 0.1 ? oldItem.portionName : nil,
             calories: calc.calories,
             proteinGrams: calc.protein,
             carbsGrams: calc.carbs,

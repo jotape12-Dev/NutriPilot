@@ -224,4 +224,83 @@ final class MealPlanAdjustmentEngineTests: XCTestCase {
         XCTAssertEqual(updatedPlan.totalCalories, 250.0) // 130 + 120
         XCTAssertEqual(updatedPlan.totalProtein, 26.7)   // 2.7 + 24.0
     }
+
+    // MARK: - 6. Testar Distribuição Multi-Refeição de Carboidratos (Almoço e Jantar)
+    func testMultiMealCarbDistributionSuggestion() {
+        let rice = makeFoodItem(name: "Arroz branco cozido", cals: 130.0, prot: 2.7, carbs: 28.2, fat: 0.3)
+        let lunchRice = PlannedMealItem(food: rice, amount: 120.0, unit: "g", calories: 156.0, proteinGrams: 3.2, carbsGrams: 33.8, fatGrams: 0.4, fiberGrams: 0.6)
+        let dinnerRice = PlannedMealItem(food: rice, amount: 100.0, unit: "g", calories: 130.0, proteinGrams: 2.7, carbsGrams: 28.2, fatGrams: 0.3, fiberGrams: 0.5)
+
+        let lunch = makeMeal(mealType: .lunch, name: "Almoço", items: [lunchRice])
+        let dinner = makeMeal(mealType: .dinner, name: "Jantar", items: [dinnerRice])
+        let plan = makeTestPlan(meals: [lunch, dinner]) // ~286 kcal
+
+        let target = NutritionTarget(
+            calories: 2000.0,
+            proteinGrams: 150.0,
+            carbsGrams: 220.0,
+            fatGrams: 55.0,
+            waterMl: 2800.0
+        )
+
+        let suggestions = MealPlanAdjustmentEngine.generateSuggestions(plan: plan, target: target, goal: .fatLoss)
+
+        XCTAssertFalse(suggestions.isEmpty)
+        // Deve sugerir distribuição de arroz entre almoço e jantar via batchScaleFood
+        guard let distributedSuggestion = suggestions.first(where: {
+            $0.title.contains("Distribuir Arroz") || $0.badgeLabel.contains("2 Refeições")
+        }) else {
+            XCTFail("Deve conter sugestão de distribuição multi-refeição")
+            return
+        }
+
+        if case .batchScaleFood(let targets) = distributedSuggestion.actionType {
+            XCTAssertEqual(targets.count, 2)
+            XCTAssertEqual(targets[0].newAmount, 155.0) // 120 + 35
+            XCTAssertEqual(targets[1].newAmount, 135.0) // 100 + 35
+        } else {
+            XCTFail("actionType deve ser .batchScaleFood")
+        }
+
+        // Testar a aplicação no plano imutável
+        let updatedPlan = MealPlanAdjustmentEngine.apply(suggestion: distributedSuggestion, to: plan)
+        XCTAssertEqual(updatedPlan.meals[0].items[0].amount, 155.0)
+        XCTAssertEqual(updatedPlan.meals[1].items[0].amount, 135.0)
+    }
+
+    // MARK: - 7. Testar Detecção e Normalização de Porção Aberrante (790g de arroz do screenshot)
+    func testOverloadedRiceSafetyCapAndNormalization() {
+        let rice = makeFoodItem(name: "Arroz branco cozido", cals: 130.0, prot: 2.7, carbs: 28.2, fat: 0.3)
+        // 790g de arroz no almoço (1027 kcal)
+        let lunchRice = PlannedMealItem(food: rice, amount: 790.0, unit: "g", calories: 1027.0, proteinGrams: 21.3, carbsGrams: 222.8, fatGrams: 2.4, fiberGrams: 4.0)
+
+        let lunch = makeMeal(mealType: .lunch, name: "Almoço Balanceado", items: [lunchRice])
+        let plan = makeTestPlan(meals: [lunch])
+
+        let target = NutritionTarget(
+            calories: 2000.0,
+            proteinGrams: 150.0,
+            carbsGrams: 220.0,
+            fatGrams: 55.0,
+            waterMl: 2800.0
+        )
+
+        let suggestions = MealPlanAdjustmentEngine.generateSuggestions(plan: plan, target: target, goal: .fatLoss)
+
+        XCTAssertFalse(suggestions.isEmpty)
+        // Deve sugerir imediatamente normalizar a porção de arroz
+        guard let normalizationSuggestion = suggestions.first(where: {
+            $0.title.contains("Normalizar Arroz") || $0.title.contains("Redistribuir Arroz")
+        }) else {
+            XCTFail("Deve detectar a porção de 790g e sugerir normalização")
+            return
+        }
+
+        XCTAssertTrue(normalizationSuggestion.badgeLabel.contains("kcal") || normalizationSuggestion.badgeLabel.contains("Rebalancear"))
+
+        // Aplicar a normalização
+        let correctedPlan = MealPlanAdjustmentEngine.apply(suggestion: normalizationSuggestion, to: plan)
+        XCTAssertEqual(correctedPlan.meals[0].items[0].amount, 180.0) // Reduzido de 790g para 180g seguro
+        XCTAssertLessThan(correctedPlan.totalCalories, 300.0)
+    }
 }
