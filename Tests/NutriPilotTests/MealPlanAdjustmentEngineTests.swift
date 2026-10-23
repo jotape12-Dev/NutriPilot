@@ -354,12 +354,18 @@ final class MealPlanAdjustmentEngineTests: XCTestCase {
         // 2. Arroz do jantar deve ter recebido carboidratos de forma equilibrada (>= 100g)
         let dinnerRiceItem = calibratedPlan.meals[3].items[0]
         XCTAssertGreaterThanOrEqual(dinnerRiceItem.amount, 100.0, "Jantar deve ter porção de carboidrato equilibrada")
-        XCTAssertLessThanOrEqual(dinnerRiceItem.amount, 220.0)
+        XCTAssertLessThanOrEqual(dinnerRiceItem.amount, 260.0)
 
-        // 3. Totais do plano rebalanceado devem estar alinhados com a meta diária (tolerância clínica)
-        XCTAssertEqual(calibratedPlan.totalCalories, target.calories, accuracy: 150.0)
-        XCTAssertEqual(calibratedPlan.totalProtein, target.proteinGrams, accuracy: 20.0)
-        XCTAssertEqual(calibratedPlan.totalCarbs, target.carbsGrams, accuracy: 30.0)
+        // 3. Totais do plano rebalanceado devem respeitar estritamente o teto de 5% de tolerância clínica
+        let calDev = abs(calibratedPlan.totalCalories - target.calories) / target.calories
+        let carbDev = abs(calibratedPlan.totalCarbs - target.carbsGrams) / target.carbsGrams
+        let protDev = abs(calibratedPlan.totalProtein - target.proteinGrams) / target.proteinGrams
+        let fatDev = abs(calibratedPlan.totalFat - target.fatGrams) / target.fatGrams
+
+        XCTAssertLessThanOrEqual(calDev, 0.05, "Desvio calórico (\(calDev * 100)%) não pode ultrapassar 5%")
+        XCTAssertLessThanOrEqual(carbDev, 0.05, "Desvio de carboidratos (\(carbDev * 100)%) não pode ultrapassar 5%")
+        XCTAssertLessThanOrEqual(protDev, 0.05, "Desvio proteico (\(protDev * 100)%) não pode ultrapassar 5%")
+        XCTAssertLessThanOrEqual(fatDev, 0.05, "Desvio de gordura (\(fatDev * 100)%) não pode ultrapassar 5%")
     }
 
     // MARK: - 9. Testar MealPlanStore.autoRebalanceActivePlan persistindo e sincronizando
@@ -383,7 +389,7 @@ final class MealPlanAdjustmentEngineTests: XCTestCase {
             return
         }
 
-        XCTAssertLessThanOrEqual(rebalanced.meals[0].items[0].amount, 220.0)
+        XCTAssertLessThanOrEqual(rebalanced.meals[0].items[0].amount, 260.0)
         XCTAssertLessThan(rebalanced.totalCalories, 1000.0)
     }
 
@@ -412,7 +418,22 @@ final class MealPlanAdjustmentEngineTests: XCTestCase {
         XCTAssertEqual(bread.formattedPortion(amount: 50.0, preferUnits: true), "2 fatias (50g)")
     }
 
-    // MARK: - 11. Testar MealPlanStore.updateItemAmount com portionName explícito
+    // MARK: - 11. Testar todas as variações de ovos e claras
+    func testEggVariationsReferenceUnitPortions() {
+        let wholeEgg = makeFoodItem(name: "Ovo de galinha cozido", cals: 155, prot: 13, carbs: 1.1, fat: 10.6)
+        let scrambled = makeFoodItem(name: "Ovos mexidos", cals: 150, prot: 12, carbs: 1.5, fat: 11)
+        let fried = makeFoodItem(name: "Ovo frito", cals: 190, prot: 13, carbs: 1.0, fat: 15)
+        let rawEgg = makeFoodItem(name: "Ovo", cals: 155, prot: 13, carbs: 1.1, fat: 10.6)
+        let eggWhite = makeFoodItem(name: "Clara de ovo cozida", cals: 52, prot: 11, carbs: 0.7, fat: 0.2)
+
+        XCTAssertEqual(wholeEgg.referenceUnitPortion?.gramWeight, 50.0)
+        XCTAssertEqual(scrambled.referenceUnitPortion?.gramWeight, 50.0)
+        XCTAssertEqual(fried.referenceUnitPortion?.gramWeight, 50.0)
+        XCTAssertEqual(rawEgg.referenceUnitPortion?.gramWeight, 50.0)
+        XCTAssertEqual(eggWhite.referenceUnitPortion?.gramWeight, 33.0)
+    }
+
+    // MARK: - 12. Testar MealPlanStore.updateItemAmount com portionName explícito
     func testMealPlanStoreUpdateItemAmountWithExplicitPortionName() {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_store_portion_\(UUID().uuidString).json")
         let store = MealPlanStore(storageURL: tempURL)

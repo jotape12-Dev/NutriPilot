@@ -473,19 +473,87 @@ public enum MealPlanImportEngine {
             )
         }
 
-        let amount = parsedItem.calculatedWeightGrams > 0 ? parsedItem.calculatedWeightGrams : parsedItem.detectedQuantity
+        // Determina a gramatura precisa com base na TBCA ou referenceUnitPortion
+        var amount = parsedItem.calculatedWeightGrams > 0 ? parsedItem.calculatedWeightGrams : parsedItem.detectedQuantity
+        if amount <= 0 || (parsedItem.calculatedWeightGrams <= 0 && parsedItem.detectedQuantity > 0) {
+            if let ref = food.referenceUnitPortion, parsedItem.detectedQuantity > 0 {
+                amount = parsedItem.detectedQuantity * ref.gramWeight
+            } else if amount <= 0 {
+                amount = food.servingSize
+            }
+        }
+
+        let portionName = resolvePreservedPortionName(
+            rawText: parsedItem.rawText,
+            quantity: parsedItem.detectedQuantity,
+            unit: parsedItem.detectedUnit,
+            matchedPortion: parsedItem.matchedPortion,
+            food: food
+        )
+
+        let calc = food.calculatedFor(amount: amount)
 
         return PlannedMealItem(
             food: food,
             amount: amount,
             unit: food.servingUnit,
-            portionName: parsedItem.matchedPortion?.name,
-            calories: parsedItem.macros.calories,
-            proteinGrams: parsedItem.macros.proteinGrams,
-            carbsGrams: parsedItem.macros.carbsGrams,
-            fatGrams: parsedItem.macros.fatGrams,
-            fiberGrams: parsedItem.macros.fiberGrams
+            portionName: portionName,
+            calories: calc.calories,
+            proteinGrams: calc.protein,
+            carbsGrams: calc.carbs,
+            fatGrams: calc.fat,
+            fiberGrams: calc.fiber
         )
+    }
+
+    private static func resolvePreservedPortionName(
+        rawText: String,
+        quantity: Double,
+        unit: String,
+        matchedPortion: FoodPortion?,
+        food: FoodItem
+    ) -> String? {
+        let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // 1. Tenta extrair do início do texto a porção prescrita exata (ex: "2 unidades", "2 ovos", "2 fatias", "3 claras", "1 filé", "2 colheres")
+        let pattern = "^(\\d+(?:[.,]\\d+)?)\\s*(unidades?|ovos?|claras?|fatias?|fil[eé]s?|bifes?|postas?|colher(?:es)?(?:\\s+de\\s+[a-zA-Záàâãéèêíïóôõöúçñ]+)?|x[ií]caras?(?:\\s+de\\s+[a-zA-Záàâãéèêíïóôõöúçñ]+)?|copos?|conchas?|scoops?|latas?|potes?|discos?)"
+        if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+           let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(location: 0, length: trimmed.utf16.count)) {
+            let fullMatch = (trimmed as NSString).substring(with: match.range(at: 0))
+            return fullMatch.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        // 2. Se a unidade detectada for não-métrica (não é "g" nem "ml")
+        let normUnit = unit.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        if !normUnit.isEmpty && normUnit != "g" && normUnit != "grama" && normUnit != "gramas" && normUnit != "ml" {
+            let q = quantity > 0 ? quantity : 1.0
+            let qStr = q == floor(q) ? "\(Int(q))" : String(format: "%.1f", q)
+            let unitDisplay: String
+            if normUnit.contains("unidade") || normUnit == "un" || normUnit == "und" {
+                let isEgg = food.name.localizedCaseInsensitiveContains("ovo") && !food.name.localizedCaseInsensitiveContains("clara")
+                if isEgg {
+                    unitDisplay = q > 1.05 ? "ovos" : "ovo"
+                } else {
+                    unitDisplay = q > 1.05 ? "unidades" : "unidade"
+                }
+            } else if normUnit.contains("fatia") {
+                unitDisplay = q > 1.05 ? "fatias" : "fatia"
+            } else if normUnit.contains("ovo") {
+                unitDisplay = q > 1.05 ? "ovos" : "ovo"
+            } else if normUnit.contains("clara") {
+                unitDisplay = q > 1.05 ? "claras" : "clara"
+            } else {
+                unitDisplay = unit
+            }
+            return "\(qStr) \(unitDisplay)"
+        }
+
+        // 3. Fallback para porção casada (se não for métrica)
+        if let mp = matchedPortion, !mp.name.lowercased().contains("grama") && !mp.name.lowercased().contains("100g") {
+            return mp.name
+        }
+
+        return nil
     }
 
     private static func matches(pattern: String, in text: String) -> Bool {

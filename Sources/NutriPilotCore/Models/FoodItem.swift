@@ -80,7 +80,62 @@ public struct FoodItem: Identifiable, Codable, Sendable, Equatable {
 
     /// Retorna a porção de unidade ou medida caseira de referência para alimentos comuns (frutas, ovos, fatias de pão).
     public var referenceUnitPortion: FoodPortion? {
-        // 1. Procura primeiro nas porções cadastradas da TBCA por "unidade" ou "fatia"
+        let lower = name.lowercased()
+
+        // 1. Clara de ovo (33g)
+        if lower.contains("clara") && (lower.contains("ovo") || lower.contains("ovos")) {
+            if let p = portions.first(where: { $0.gramWeight >= 30.0 && $0.gramWeight <= 36.0 }) {
+                return p
+            }
+            return FoodPortion(name: "Clara de 1 ovo", gramWeight: 33.0, description: "1 clara (33g)")
+        }
+
+        // 2. Ovos inteiros em todas as suas variações ('ovo', 'ovos', 'ovo de galinha', 'ovo cozido', 'ovos mexidos', 'ovo frito') -> 50g
+        if lower.contains("ovo") || lower.contains("ovos") {
+            if let p = portions.first(where: {
+                let n = $0.name.lowercased()
+                return (n.contains("1 ovo") || n.contains("unidade")) && $0.gramWeight >= 45.0 && $0.gramWeight <= 65.0
+            }) {
+                return p
+            }
+            return FoodPortion(name: "Unidade", gramWeight: 50.0, description: "1 ovo (50g)")
+        }
+
+        // 3. Frutas e itens tradicionalmente unitários
+        if lower.contains("banana") {
+            if let p = portions.first(where: { $0.name.lowercased().contains("unidade") && $0.gramWeight >= 60.0 && $0.gramWeight <= 85.0 }) {
+                return p
+            }
+            return FoodPortion(name: "Unidade média", gramWeight: 70.0, description: "1 banana média (70g)")
+        } else if lower.contains("maçã") || lower.contains("maca") {
+            if let p = portions.first(where: { $0.name.lowercased().contains("unidade") }) { return p }
+            return FoodPortion(name: "Unidade média", gramWeight: 130.0, description: "1 maçã média (130g)")
+        } else if lower.contains("laranja") {
+            if let p = portions.first(where: { $0.name.lowercased().contains("unidade") }) { return p }
+            return FoodPortion(name: "Unidade média", gramWeight: 150.0, description: "1 laranja média (150g)")
+        } else if lower.contains("pão") || lower.contains("pao") {
+            if lower.contains("forma") || lower.contains("integral") {
+                if let p = portions.first(where: { $0.name.lowercased().contains("fatia") }) { return p }
+                return FoodPortion(name: "Fatia", gramWeight: 25.0, description: "1 fatia (25g)")
+            } else {
+                if let p = portions.first(where: { $0.name.lowercased().contains("unidade") }) { return p }
+                return FoodPortion(name: "Unidade", gramWeight: 50.0, description: "1 pão francês (50g)")
+            }
+        } else if lower.contains("tomate") {
+            if let p = portions.first(where: { $0.name.lowercased().contains("unidade") }) { return p }
+            return FoodPortion(name: "Unidade média", gramWeight: 100.0, description: "1 tomate médio (100g)")
+        } else if lower.contains("tangerina") || lower.contains("mexerica") {
+            if let p = portions.first(where: { $0.name.lowercased().contains("unidade") }) { return p }
+            return FoodPortion(name: "Unidade média", gramWeight: 100.0, description: "1 tangerina média (100g)")
+        } else if lower.contains("pera") {
+            if let p = portions.first(where: { $0.name.lowercased().contains("unidade") }) { return p }
+            return FoodPortion(name: "Unidade média", gramWeight: 130.0, description: "1 pera média (130g)")
+        } else if lower.contains("kiwi") {
+            if let p = portions.first(where: { $0.name.lowercased().contains("unidade") }) { return p }
+            return FoodPortion(name: "Unidade média", gramWeight: 75.0, description: "1 kiwi médio (75g)")
+        }
+
+        // 4. Procura nas porções cadastradas da TBCA por "unidade" ou "fatia"
         if let match = portions.first(where: {
             $0.name.localizedCaseInsensitiveContains("unidade") ||
             $0.name.localizedCaseInsensitiveContains("fatia")
@@ -88,31 +143,6 @@ public struct FoodItem: Identifiable, Codable, Sendable, Equatable {
             return match
         }
 
-        // 2. Mapeamento heurístico determinístico para frutas e itens tradicionalmente unitários
-        let lower = name.lowercased()
-        if lower.contains("banana") {
-            return FoodPortion(name: "Unidade média", gramWeight: 70.0, description: "1 banana média (70g)")
-        } else if lower.contains("maçã") || lower.contains("maca") {
-            return FoodPortion(name: "Unidade média", gramWeight: 130.0, description: "1 maçã média (130g)")
-        } else if lower.contains("laranja") {
-            return FoodPortion(name: "Unidade média", gramWeight: 150.0, description: "1 laranja média (150g)")
-        } else if lower.contains("ovo") {
-            return FoodPortion(name: "Unidade", gramWeight: 50.0, description: "1 ovo (50g)")
-        } else if lower.contains("pão") || lower.contains("pao") {
-            if lower.contains("forma") || lower.contains("integral") {
-                return FoodPortion(name: "Fatia", gramWeight: 25.0, description: "1 fatia (25g)")
-            } else {
-                return FoodPortion(name: "Unidade", gramWeight: 50.0, description: "1 pão francês (50g)")
-            }
-        } else if lower.contains("tomate") {
-            return FoodPortion(name: "Unidade média", gramWeight: 100.0, description: "1 tomate médio (100g)")
-        } else if lower.contains("tangerina") || lower.contains("mexerica") {
-            return FoodPortion(name: "Unidade média", gramWeight: 100.0, description: "1 tangerina média (100g)")
-        } else if lower.contains("pera") {
-            return FoodPortion(name: "Unidade média", gramWeight: 130.0, description: "1 pera média (130g)")
-        } else if lower.contains("kiwi") {
-            return FoodPortion(name: "Unidade média", gramWeight: 75.0, description: "1 kiwi médio (75g)")
-        }
         return nil
     }
 

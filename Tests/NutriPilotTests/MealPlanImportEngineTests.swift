@@ -163,4 +163,36 @@ final class MealPlanImportEngineTests: XCTestCase {
         XCTAssertEqual(plan.meals[4].name, "Jantar")
         XCTAssertEqual(plan.meals[4].suggestedTime, "21:00")
     }
+
+    func testImportPreservesHouseholdPortionNamesAndCalculatesWeights() {
+        let dietText = """
+        Café da Manhã:
+        - 2 unidades de banana prata
+        - 2 ovos mexidos
+        - 2 fatias de pão integral
+        """
+
+        let plan = MealPlanImportEngine.importPlan(text: dietText, title: "Café Teste")
+        XCTAssertEqual(plan.meals.count, 1)
+        let items = plan.meals[0].items
+        XCTAssertEqual(items.count, 3)
+
+        // Banana: 2 unidades -> portionName "2 unidades", amount 140g (70g * 2)
+        let bananaItem = items.first(where: { $0.food.name.localizedCaseInsensitiveContains("banana") })
+        XCTAssertNotNil(bananaItem)
+        XCTAssertEqual(bananaItem?.portionName, "2 unidades")
+        XCTAssertEqual(bananaItem?.amount ?? 0, 140.0, accuracy: 1.0)
+
+        // Ovos: 2 ovos mexidos -> portionName "2 ovos", amount 100g (50g * 2)
+        let eggItem = items.first(where: { $0.food.name.localizedCaseInsensitiveContains("ovo") })
+        XCTAssertNotNil(eggItem)
+        XCTAssertEqual(eggItem?.portionName, "2 ovos")
+        XCTAssertEqual(eggItem?.amount ?? 0, 100.0, accuracy: 1.0)
+
+        // Pão: 2 fatias -> portionName "2 fatias", amount 50g (25g * 2)
+        let breadItem = items.first(where: { $0.food.name.localizedCaseInsensitiveContains("pão") })
+        XCTAssertNotNil(breadItem)
+        XCTAssertEqual(breadItem?.portionName, "2 fatias")
+        XCTAssertEqual(breadItem?.amount ?? 0, 50.0, accuracy: 1.0)
+    }
 }

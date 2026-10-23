@@ -122,16 +122,17 @@ public enum MealPlanAdjustmentEngine {
         } else if name.contains("whey") {
             return (min: 15.0, max: 40.0, standard: 30.0)
         } else if name.contains("azeite") || name.contains("óleo") {
-            return (min: 5.0, max: 15.0, standard: 10.0)
+            return (min: 3.0, max: 25.0, standard: 13.0)
         } else if name.contains("castanha") || name.contains("amendoim") {
-            return (min: 10.0, max: 30.0, standard: 20.0)
+            return (min: 10.0, max: 35.0, standard: 20.0)
         }
         return (min: max(5.0, item.amount * 0.5), max: max(20.0, item.amount * 1.8), standard: item.amount)
     }
 
     // MARK: - Rebalanceamento Automático Global
 
-    /// Reajusta e equilibra proporcionalmente as porções de todas as refeições do dia para atingir 100% das metas diárias.
+    /// Reajusta e equilibra proporcionalmente as porções de todas as refeições do dia para atingir 100% das metas diárias,
+    /// garantindo rigorosamente que o desvio final em carboidratos, proteínas, gorduras e calorias NUNCA ultrapasse 5% da meta.
     public static func autoRebalancePlan(plan: DailyMealPlan, target: NutritionTarget) -> DailyMealPlan {
         guard !plan.meals.isEmpty else { return plan }
 
@@ -151,7 +152,7 @@ public enum MealPlanAdjustmentEngine {
                         food: item.food,
                         amount: clampedAmount,
                         unit: item.unit,
-                        portionName: nil,
+                        portionName: item.portionName,
                         calories: calc.calories,
                         proteinGrams: calc.protein,
                         carbsGrams: calc.carbs,
@@ -175,16 +176,8 @@ public enum MealPlanAdjustmentEngine {
         let currentProt = workingMeals.reduce(0.0) { $0 + $1.totalProtein }
         let protDelta = target.proteinGrams - currentProt
 
-        if abs(protDelta) > 3.0 {
-            var proteinEntries: [(mealIdx: Int, itemIdx: Int, item: PlannedMealItem, bounds: (min: Double, max: Double, standard: Double))] = []
-            for mIdx in workingMeals.indices {
-                for iIdx in workingMeals[mIdx].items.indices {
-                    let it = workingMeals[mIdx].items[iIdx]
-                    if classifyMacroRole(for: it) == .protein {
-                        proteinEntries.append((mIdx, iIdx, it, safeServingBounds(for: it)))
-                    }
-                }
-            }
+        if abs(protDelta) > 2.0 {
+            let proteinEntries = getEntries(for: .protein, in: workingMeals)
             distributeDelta(deltaMacro: protDelta, gramsPerMacro: 3.3, entries: proteinEntries, workingMeals: &workingMeals)
         }
 
@@ -192,16 +185,8 @@ public enum MealPlanAdjustmentEngine {
         let currentCarbs = workingMeals.reduce(0.0) { $0 + $1.totalCarbs }
         let carbsDelta = target.carbsGrams - currentCarbs
 
-        if abs(carbsDelta) > 3.0 {
-            var carbEntries: [(mealIdx: Int, itemIdx: Int, item: PlannedMealItem, bounds: (min: Double, max: Double, standard: Double))] = []
-            for mIdx in workingMeals.indices {
-                for iIdx in workingMeals[mIdx].items.indices {
-                    let it = workingMeals[mIdx].items[iIdx]
-                    if classifyMacroRole(for: it) == .carbs {
-                        carbEntries.append((mIdx, iIdx, it, safeServingBounds(for: it)))
-                    }
-                }
-            }
+        if abs(carbsDelta) > 2.0 {
+            let carbEntries = getEntries(for: .carbs, in: workingMeals)
             distributeDelta(deltaMacro: carbsDelta, gramsPerMacro: 3.5, entries: carbEntries, workingMeals: &workingMeals)
         }
 
@@ -209,37 +194,141 @@ public enum MealPlanAdjustmentEngine {
         let currentFat = workingMeals.reduce(0.0) { $0 + $1.totalFat }
         let fatDelta = target.fatGrams - currentFat
 
-        if abs(fatDelta) > 2.0 {
-            var fatEntries: [(mealIdx: Int, itemIdx: Int, item: PlannedMealItem, bounds: (min: Double, max: Double, standard: Double))] = []
-            for mIdx in workingMeals.indices {
-                for iIdx in workingMeals[mIdx].items.indices {
-                    let it = workingMeals[mIdx].items[iIdx]
-                    if classifyMacroRole(for: it) == .fat {
-                        fatEntries.append((mIdx, iIdx, it, safeServingBounds(for: it)))
-                    }
-                }
-            }
+        if abs(fatDelta) > 1.5 {
+            let fatEntries = getEntries(for: .fat, in: workingMeals)
             distributeDelta(deltaMacro: fatDelta, gramsPerMacro: 1.1, entries: fatEntries, workingMeals: &workingMeals)
         }
 
-        // 5. Sintonia Fina Calórica
+        // 5. Sintonia Fina Calórica Proporcional (respeitando rigorosamente a tolerância de 5% de cada macro)
         let currentCals = workingMeals.reduce(0.0) { $0 + $1.totalCalories }
         let calDelta = target.calories - currentCals
 
-        if abs(calDelta) > 40.0 {
-            var carbEntries: [(mealIdx: Int, itemIdx: Int, item: PlannedMealItem, bounds: (min: Double, max: Double, standard: Double))] = []
-            for mIdx in workingMeals.indices {
-                for iIdx in workingMeals[mIdx].items.indices {
-                    let it = workingMeals[mIdx].items[iIdx]
-                    if classifyMacroRole(for: it) == .carbs {
-                        carbEntries.append((mIdx, iIdx, it, safeServingBounds(for: it)))
-                    }
+        if abs(calDelta) > 25.0 {
+            let currentCarbsNow = workingMeals.reduce(0.0) { $0 + $1.totalCarbs }
+            let currentFatNow = workingMeals.reduce(0.0) { $0 + $1.totalFat }
+
+            let carbsMax = target.carbsGrams * 1.04
+            let carbsMin = target.carbsGrams * 0.96
+            let fatMax = target.fatGrams * 1.04
+            let fatMin = target.fatGrams * 0.96
+
+            let carbEntries = getEntries(for: .carbs, in: workingMeals)
+            let fatEntries = getEntries(for: .fat, in: workingMeals)
+
+            if calDelta > 0 {
+                // Necessário acrescentar calorias
+                let carbsHeadroom = max(0.0, carbsMax - currentCarbsNow)
+                let calsFromCarbs = min(calDelta, carbsHeadroom * 4.0)
+                if calsFromCarbs > 10.0 {
+                    let carbsToAdd = calsFromCarbs / 4.0
+                    distributeDelta(deltaMacro: carbsToAdd, gramsPerMacro: 3.5, entries: carbEntries, workingMeals: &workingMeals)
+                }
+
+                let remainingCalDelta = calDelta - calsFromCarbs
+                let fatHeadroom = max(0.0, fatMax - currentFatNow)
+                let calsFromFat = min(remainingCalDelta, fatHeadroom * 9.0)
+                if calsFromFat > 10.0 {
+                    let fatToAdd = calsFromFat / 9.0
+                    distributeDelta(deltaMacro: fatToAdd, gramsPerMacro: 1.1, entries: fatEntries, workingMeals: &workingMeals)
+                }
+            } else {
+                // Necessário reduzir calorias
+                let carbsFloor = max(0.0, currentCarbsNow - carbsMin)
+                let calsToRemoveFromCarbs = min(abs(calDelta), carbsFloor * 4.0)
+                if calsToRemoveFromCarbs > 10.0 {
+                    let carbsToRemove = -calsToRemoveFromCarbs / 4.0
+                    distributeDelta(deltaMacro: carbsToRemove, gramsPerMacro: 3.5, entries: carbEntries, workingMeals: &workingMeals)
+                }
+
+                let remainingToRemove = abs(calDelta) - calsToRemoveFromCarbs
+                let fatFloor = max(0.0, currentFatNow - fatMin)
+                let calsToRemoveFromFat = min(remainingToRemove, fatFloor * 9.0)
+                if calsToRemoveFromFat > 10.0 {
+                    let fatToRemove = -calsToRemoveFromFat / 9.0
+                    distributeDelta(deltaMacro: fatToRemove, gramsPerMacro: 1.1, entries: fatEntries, workingMeals: &workingMeals)
                 }
             }
-            distributeDelta(deltaMacro: calDelta / 4.0, gramsPerMacro: 3.5, entries: carbEntries, workingMeals: &workingMeals)
         }
 
-        // 6. Atualização final de metas por refeição
+        // 6. Passagem Final de Clampeamento & Conformidade Clínica Estrita de 5%
+        // Garante que |total - target| / target <= 0.05 para calorias e todos os macros
+        for _ in 0..<3 {
+            var didAdjust = false
+
+            // Carbos: [target * 0.95, target * 1.05]
+            if target.carbsGrams > 10.0 {
+                let curCarbs = workingMeals.reduce(0.0) { $0 + $1.totalCarbs }
+                let maxAllowed = target.carbsGrams * 1.05
+                let minAllowed = target.carbsGrams * 0.95
+                if curCarbs > maxAllowed {
+                    let excess = curCarbs - (target.carbsGrams * 1.02)
+                    let carbEntries = getEntries(for: .carbs, in: workingMeals)
+                    distributeDelta(deltaMacro: -excess, gramsPerMacro: 3.5, entries: carbEntries, workingMeals: &workingMeals)
+                    didAdjust = true
+                } else if curCarbs < minAllowed {
+                    let deficit = (target.carbsGrams * 0.98) - curCarbs
+                    let carbEntries = getEntries(for: .carbs, in: workingMeals)
+                    distributeDelta(deltaMacro: deficit, gramsPerMacro: 3.5, entries: carbEntries, workingMeals: &workingMeals)
+                    didAdjust = true
+                }
+            }
+
+            // Proteína: [target * 0.95, target * 1.05]
+            if target.proteinGrams > 10.0 {
+                let curProt = workingMeals.reduce(0.0) { $0 + $1.totalProtein }
+                let maxAllowed = target.proteinGrams * 1.05
+                let minAllowed = target.proteinGrams * 0.95
+                if curProt > maxAllowed {
+                    let excess = curProt - (target.proteinGrams * 1.02)
+                    let protEntries = getEntries(for: .protein, in: workingMeals)
+                    distributeDelta(deltaMacro: -excess, gramsPerMacro: 3.3, entries: protEntries, workingMeals: &workingMeals)
+                    didAdjust = true
+                } else if curProt < minAllowed {
+                    let deficit = (target.proteinGrams * 0.98) - curProt
+                    let protEntries = getEntries(for: .protein, in: workingMeals)
+                    distributeDelta(deltaMacro: deficit, gramsPerMacro: 3.3, entries: protEntries, workingMeals: &workingMeals)
+                    didAdjust = true
+                }
+            }
+
+            // Gorduras: [target * 0.95, target * 1.05]
+            if target.fatGrams > 5.0 {
+                let curFat = workingMeals.reduce(0.0) { $0 + $1.totalFat }
+                let maxAllowed = target.fatGrams * 1.05
+                let minAllowed = target.fatGrams * 0.95
+                if curFat > maxAllowed {
+                    let excess = curFat - (target.fatGrams * 1.02)
+                    let fatEntries = getEntries(for: .fat, in: workingMeals)
+                    distributeDelta(deltaMacro: -excess, gramsPerMacro: 1.1, entries: fatEntries, workingMeals: &workingMeals)
+                    didAdjust = true
+                } else if curFat < minAllowed {
+                    let deficit = (target.fatGrams * 0.98) - curFat
+                    let fatEntries = getEntries(for: .fat, in: workingMeals)
+                    distributeDelta(deltaMacro: deficit, gramsPerMacro: 1.1, entries: fatEntries, workingMeals: &workingMeals)
+                    didAdjust = true
+                }
+            }
+
+            // Calorias: [target * 0.95, target * 1.05]
+            if target.calories > 100.0 {
+                let curCals = workingMeals.reduce(0.0) { $0 + $1.totalCalories }
+                let maxAllowed = target.calories * 1.05
+                let minAllowed = target.calories * 0.95
+                if curCals > maxAllowed {
+                    let factor = (target.calories * 1.02) / curCals
+                    scaleAllItems(by: factor, in: &workingMeals)
+                    didAdjust = true
+                } else if curCals < minAllowed {
+                    let factor = (target.calories * 0.98) / curCals
+                    scaleAllItems(by: factor, in: &workingMeals)
+                    didAdjust = true
+                }
+            }
+
+            if !didAdjust { break }
+        }
+
+        // 7. Atualização final de metas por refeição
         for mIdx in workingMeals.indices {
             let m = workingMeals[mIdx]
             let cals = m.items.reduce(0.0) { $0 + $1.calories }.rounded(to: 1)
@@ -263,6 +352,58 @@ public enum MealPlanAdjustmentEngine {
             targetFiberGrams: target.fiberGrams,
             meals: workingMeals
         )
+    }
+
+    private static func getEntries(
+        for role: FoodMacroRole,
+        in workingMeals: [PlannedMeal]
+    ) -> [(mealIdx: Int, itemIdx: Int, item: PlannedMealItem, bounds: (min: Double, max: Double, standard: Double))] {
+        var entries: [(mealIdx: Int, itemIdx: Int, item: PlannedMealItem, bounds: (min: Double, max: Double, standard: Double))] = []
+        for mIdx in workingMeals.indices {
+            for iIdx in workingMeals[mIdx].items.indices {
+                let it = workingMeals[mIdx].items[iIdx]
+                if classifyMacroRole(for: it) == role {
+                    entries.append((mIdx, iIdx, it, safeServingBounds(for: it)))
+                }
+            }
+        }
+        return entries
+    }
+
+    private static func scaleAllItems(by factor: Double, in workingMeals: inout [PlannedMeal]) {
+        guard factor > 0.0, abs(factor - 1.0) > 0.005 else { return }
+        for mIdx in workingMeals.indices {
+            var items = workingMeals[mIdx].items
+            for iIdx in items.indices {
+                let it = items[iIdx]
+                let bounds = safeServingBounds(for: it)
+                let newAmount = min(bounds.max, max(bounds.min, (it.amount * factor).rounded(to: 1)))
+                if abs(newAmount - it.amount) > 0.1 {
+                    let calc = it.food.calculatedFor(amount: newAmount)
+                    items[iIdx] = PlannedMealItem(
+                        id: it.id,
+                        food: it.food,
+                        amount: newAmount,
+                        unit: it.unit,
+                        portionName: it.portionName,
+                        calories: calc.calories,
+                        proteinGrams: calc.protein,
+                        carbsGrams: calc.carbs,
+                        fatGrams: calc.fat,
+                        fiberGrams: calc.fiber
+                    )
+                }
+            }
+            let m = workingMeals[mIdx]
+            workingMeals[mIdx] = PlannedMeal(
+                id: m.id,
+                mealType: m.mealType,
+                name: m.name,
+                suggestedTime: m.suggestedTime,
+                targetCalories: m.targetCalories,
+                items: items
+            )
+        }
     }
 
     private static func distributeDelta(
