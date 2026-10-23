@@ -8,6 +8,7 @@ public struct WaterView: View {
     public var store: WaterStore
 
     @State private var hapticTrigger: Int = 0
+    @State private var isLiveActivityActive: Bool = false
 
     public init(targetWaterMl: Double = 3000, store: WaterStore = .shared) {
         self.targetWaterMl = targetWaterMl
@@ -59,6 +60,9 @@ public struct WaterView: View {
                     todayLogsSection
                 }
                 .padding(.bottom, 32)
+            }
+            .onAppear {
+                isLiveActivityActive = WaterLiveActivityManager.shared.isActivityActive
             }
             .navigationTitle("Hidratação")
             .background(Color.appBackground)
@@ -229,6 +233,64 @@ public struct WaterView: View {
                         .pickerStyle(.menu)
                         .font(.caption.bold())
                     }
+                }
+            }
+
+            // MARK: - Live Activity (Dynamic Island & Tela Bloqueada)
+            Divider()
+
+            VStack(spacing: 10) {
+                Toggle(isOn: Binding(
+                    get: { isLiveActivityActive },
+                    set: { enabled in
+                        isLiveActivityActive = enabled
+                        if enabled {
+                            WaterLiveActivityManager.shared.startLiveActivity(
+                                targetWaterMl: targetWaterMl,
+                                currentWaterMl: currentConsumed,
+                                config: store.reminderConfig
+                            )
+                        } else {
+                            WaterLiveActivityManager.shared.endLiveActivity(immediate: true)
+                        }
+                        hapticTrigger += 1
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "iphone.gen3")
+                                .foregroundColor(.cyan)
+                                .font(.caption)
+                            Text("Acompanhar na Ilha Dinâmica & Tela Bloqueada")
+                                .font(.subheadline.bold())
+                        }
+                        Text("Live Activity com progresso em tempo real")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .tint(.cyan)
+
+                if isLiveActivityActive {
+                    Button {
+                        WaterLiveActivityManager.shared.updateLiveActivity(
+                            currentWaterMl: currentConsumed,
+                            breakdown: pacingBreakdown
+                        )
+                        hapticTrigger += 1
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.clockwise.circle")
+                            Text("Testar / Atualizar Live Activity")
+                        }
+                        .font(.caption.bold())
+                        .foregroundColor(.cyan)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .background(Color.cyan.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

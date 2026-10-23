@@ -12,20 +12,40 @@
 		0D4EE13EC322DF3E4AA912B9 /* NutritionTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D3809FDDE9B5D84817CA80 /* NutritionTarget.swift */; };
 		0F5088D5CAFADB754BD646DF /* BioimpedancePDFParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F084B9EDA01AC4294F205CB5 /* BioimpedancePDFParser.swift */; };
 		21E9CF8DF376EB00DA5F08AF /* BioimpedanceAnalysisSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8F8C63845145E8F6E99419 /* BioimpedanceAnalysisSheet.swift */; };
+		22830C8FF477109C9BBB0988 /* BioimpedancePDFParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F084B9EDA01AC4294F205CB5 /* BioimpedancePDFParser.swift */; };
 		245ABDBF981B3A10340850D7 /* MealPlanAdjustmentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFC540E2F577E3966FAB0E93 /* MealPlanAdjustmentEngine.swift */; };
 		2A81951E2C16C067BCE1128C /* FoodSearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C801680CAB2E442D0F2A83C /* FoodSearchEngine.swift */; };
+		2E40DF9FC08DA1934D95A796 /* MealPlanImportEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8645E3B0497BD5CD4DAC9DFB /* MealPlanImportEngine.swift */; };
 		2FA2D63DBF1C7B96DE7EBEC2 /* WaterLiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D42597AAFE326E88C7E8185 /* WaterLiveActivityManager.swift */; };
+		2FB9907BEDEBECD2035E1462 /* BodyMeasurement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D546E8C2E0AF4BE6A7E5EF7A /* BodyMeasurement.swift */; };
+		330B6A00260EABE43F063398 /* GroceryListGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A09D1652467E57A5D2108C /* GroceryListGenerator.swift */; };
+		339B48F1BEA64CB8E73B2D21 /* WaterLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0513E44A3B68CD94BF672A55 /* WaterLog.swift */; };
 		366DD3BF2195575A15FE3A9B /* WaterNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E2EA92223718694304535D /* WaterNotificationScheduler.swift */; };
+		36B5D0D3177ADD8C02B61F8F /* MealParserEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20377FF701309AADE0CD7B43 /* MealParserEngine.swift */; };
 		3A9A518982632C0A7C059916 /* MealPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6521F2E0F35B5DCFE9EC2F1A /* MealPlanView.swift */; };
 		3C2C08B984ADF7E0622A9B29 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E1CD691C4D69A224C74EF5F /* RootView.swift */; };
 		3CBDC482E860A56821A67DD2 /* MealPlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2840C6CED943C36889997ABF /* MealPlanStore.swift */; };
+		3ED58ECD96FA8FDC01F56E5A /* WaterPacingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DE24C01333F64B184B115C9 /* WaterPacingActivityAttributes.swift */; };
+		48B50B8E5E8B2C123590967A /* NutriPilotWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 19F6E642CA23114F8C512612 /* NutriPilotWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4A13E33C0FF166910EF30011 /* FoodItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2636A4FBAAF3BD648E344E27 /* FoodItem.swift */; };
 		4B5A8F271123B304CE0B2322 /* SuccinctAssistantEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B944CABA28157842B7D9FE /* SuccinctAssistantEngine.swift */; };
+		52E03708317F729C38758580 /* WaterPacingWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A540EBBBA0FF91435326D4A /* WaterPacingWidget.swift */; };
+		55E3B3BF9B2039F051A92AC1 /* MealLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0967A0535BEC476C7129E7 /* MealLog.swift */; };
+		6234CD9760377A2F2A60E4F9 /* WeightTrendCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAF790A5472B13338ADB4678 /* WeightTrendCalculator.swift */; };
 		651C9C679BBB5E65C807FE4D /* NutriPilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A67B48114E0DFF68CFA066FC /* NutriPilotApp.swift */; };
+		65CF7B13A5BB738C36123DB6 /* ReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B3E96CF132828B7C3A7E11 /* ReportExporter.swift */; };
+		65D9DDBCCFE61CF077EC2DDB /* BodyMeasurementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A84FF0AF37BA564900349A /* BodyMeasurementStore.swift */; };
+		67AABA484A4A5EA2B75E9C5A /* WaterStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FAC8D5FCD47ABC0E1AA0CF7 /* WaterStore.swift */; };
+		6A21D0D9E0FBD6C358548E80 /* TBCAFoodDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AEC53AB8F04E805EF8B7D10 /* TBCAFoodDatabase.swift */; };
 		6D1919BD008C19CF528EE968 /* BodyMeasurementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A84FF0AF37BA564900349A /* BodyMeasurementStore.swift */; };
 		6D86F65ABEF3B5CABE2EDE3D /* WeightTrendCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAF790A5472B13338ADB4678 /* WeightTrendCalculator.swift */; };
+		797117BA8EA27F556AD6945B /* MealStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D57760672199AED9BF882D0D /* MealStore.swift */; };
 		7A06FD322FAF9863DB9E7CCC /* WaterLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0513E44A3B68CD94BF672A55 /* WaterLog.swift */; };
 		83321D741A7144FC6DE65B56 /* ReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B3E96CF132828B7C3A7E11 /* ReportExporter.swift */; };
 		839A478B809BC801D3CFBFFF /* MealParserConfirmationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EA1B77A7287CC3A39222A65 /* MealParserConfirmationSheet.swift */; };
+		87394FD4626CED4BDDEAD76B /* ProfileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 220DF0251143AE307BE10795 /* ProfileStore.swift */; };
+		879019B87EFBA8AA197C967B /* WaterLiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D42597AAFE326E88C7E8185 /* WaterLiveActivityManager.swift */; };
+		8C22C1CBED0831F928FF82A3 /* NutritionTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D3809FDDE9B5D84817CA80 /* NutritionTarget.swift */; };
 		8EACB1CD6A6FFE7180B55F0C /* BodyProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C8ABAE5AD21302E7C591554 /* BodyProgressView.swift */; };
 		91DCDF6E218CF36E8E01D14E /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB090A702E8772CEB926B55 /* DashboardView.swift */; };
 		93B469029C3A2614356BF889 /* BodyCompositionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F8DD1D7ACB41748727A9C3A /* BodyCompositionCalculator.swift */; };
@@ -35,27 +55,63 @@
 		9924A86233E1B33BBDEBF1B1 /* ProfileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 220DF0251143AE307BE10795 /* ProfileStore.swift */; };
 		A13DB4135EA819400CECA6B0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46BEF6B2159841EBBD3F1BB7 /* OnboardingView.swift */; };
 		A67B60EB3ACDAC5A97884DD9 /* FoodItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2636A4FBAAF3BD648E344E27 /* FoodItem.swift */; };
+		A6BD75D76EDE8A8188D69576 /* NutriPilotWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7F2A42EDA149E7A4CD1F245 /* NutriPilotWidgetsBundle.swift */; };
 		AA8406E266036B220B87CB1A /* MealPlanComplianceEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 481604DF813BA343CA10025B /* MealPlanComplianceEvaluator.swift */; };
 		AEADE36E463993789DD0E8C1 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1206AFEEEE1FF017A865DD90 /* AppTheme.swift */; };
+		B489658E0F574F2CF8B5DC6D /* MealPlanGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F925E38527D516FD6696BAE /* MealPlanGenerator.swift */; };
+		B9659D9A32FAFE4ABE9F9F91 /* NutritionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D44FA03F6339A3116D169B /* NutritionCalculator.swift */; };
 		BA2CE3C5D12517B54C98C7F6 /* TBCAFoodDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AEC53AB8F04E805EF8B7D10 /* TBCAFoodDatabase.swift */; };
+		C86BCD9A25B9285273C2FF64 /* SuccinctAssistantEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B944CABA28157842B7D9FE /* SuccinctAssistantEngine.swift */; };
 		C91176CE704F8AFC9E5A2DA2 /* MealLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0967A0535BEC476C7129E7 /* MealLog.swift */; };
 		D2895828707211FE560421AE /* WaterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB04DDE1C86C5E06957C109 /* WaterView.swift */; };
 		D507268D3D3491026F23D8EF /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A582E9E1A7BCF4656D1CC348 /* UserProfile.swift */; };
 		D6F493404572C5FE52969D4F /* GroceryListGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A09D1652467E57A5D2108C /* GroceryListGenerator.swift */; };
+		D9544F519CB70A9B2890117E /* FoodSubstitutionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DB0B8C69EC3F70B6B0E21C1 /* FoodSubstitutionEngine.swift */; };
 		DB25DAC5DA7E3E0A3158BD7B /* WaterPacingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DE24C01333F64B184B115C9 /* WaterPacingActivityAttributes.swift */; };
 		E21BA5340201BB5D9D96FD86 /* ReportExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D1B5BEDED968B1CD167E71 /* ReportExportView.swift */; };
+		E37A1197CE421DFAE50CCDC8 /* MealPlanComplianceEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 481604DF813BA343CA10025B /* MealPlanComplianceEvaluator.swift */; };
+		E6483707ABDF90CE41CF10E8 /* FoodSearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C801680CAB2E442D0F2A83C /* FoodSearchEngine.swift */; };
 		E676C9FDF1693519704FD4EF /* FoodLoggingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC321893D2AE27B08F761BA5 /* FoodLoggingView.swift */; };
 		EA5375BE9468F77DEA4C2088 /* NutritionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D44FA03F6339A3116D169B /* NutritionCalculator.swift */; };
+		EB6FB5D4EEE9775B17686B90 /* MealPlanAdjustmentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFC540E2F577E3966FAB0E93 /* MealPlanAdjustmentEngine.swift */; };
 		EF383A07D95377651F46521D /* WaterStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FAC8D5FCD47ABC0E1AA0CF7 /* WaterStore.swift */; };
+		F22A42CEC855E42181598BA7 /* MealPlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2840C6CED943C36889997ABF /* MealPlanStore.swift */; };
 		F45DD9716AF3C54EE1AECDC9 /* MealPlanImportEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8645E3B0497BD5CD4DAC9DFB /* MealPlanImportEngine.swift */; };
 		F4ADE674DAF3158D15D48490 /* MealParserEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20377FF701309AADE0CD7B43 /* MealParserEngine.swift */; };
+		FD9675138EFD8DEF4F9BF1EA /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A582E9E1A7BCF4656D1CC348 /* UserProfile.swift */; };
+		FEDF003CBDE64A66FD17F078 /* BodyCompositionCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F8DD1D7ACB41748727A9C3A /* BodyCompositionCalculator.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		48D7D57888467523CA555366 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0EE3DB613E58107E13EC1020 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 75A307B4DCF4E0B0210254B2;
+			remoteInfo = NutriPilotWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		BC3B6CFDEFB01189EA9A4AB1 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				48B50B8E5E8B2C123590967A /* NutriPilotWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0513E44A3B68CD94BF672A55 /* WaterLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterLog.swift; sourceTree = "<group>"; };
 		05D3809FDDE9B5D84817CA80 /* NutritionTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionTarget.swift; sourceTree = "<group>"; };
 		06B3E96CF132828B7C3A7E11 /* ReportExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportExporter.swift; sourceTree = "<group>"; };
 		1206AFEEEE1FF017A865DD90 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		19F6E642CA23114F8C512612 /* NutriPilotWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = NutriPilotWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A0967A0535BEC476C7129E7 /* MealLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealLog.swift; sourceTree = "<group>"; };
 		20377FF701309AADE0CD7B43 /* MealParserEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealParserEngine.swift; sourceTree = "<group>"; };
 		220DF0251143AE307BE10795 /* ProfileStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStore.swift; sourceTree = "<group>"; };
@@ -71,6 +127,7 @@
 		481604DF813BA343CA10025B /* MealPlanComplianceEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanComplianceEvaluator.swift; sourceTree = "<group>"; };
 		4BB090A702E8772CEB926B55 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		4DE24C01333F64B184B115C9 /* WaterPacingActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterPacingActivityAttributes.swift; sourceTree = "<group>"; };
+		5A540EBBBA0FF91435326D4A /* WaterPacingWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterPacingWidget.swift; sourceTree = "<group>"; };
 		6521F2E0F35B5DCFE9EC2F1A /* MealPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanView.swift; sourceTree = "<group>"; };
 		6794148A21436C4483AB9606 /* NutriPilot.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NutriPilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D42597AAFE326E88C7E8185 /* WaterLiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterLiveActivityManager.swift; sourceTree = "<group>"; };
@@ -83,6 +140,7 @@
 		9E1CD691C4D69A224C74EF5F /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		A582E9E1A7BCF4656D1CC348 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		A67B48114E0DFF68CFA066FC /* NutriPilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutriPilotApp.swift; sourceTree = "<group>"; };
+		A7F2A42EDA149E7A4CD1F245 /* NutriPilotWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutriPilotWidgetsBundle.swift; sourceTree = "<group>"; };
 		BFC540E2F577E3966FAB0E93 /* MealPlanAdjustmentEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanAdjustmentEngine.swift; sourceTree = "<group>"; };
 		CFB04DDE1C86C5E06957C109 /* WaterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterView.swift; sourceTree = "<group>"; };
 		D0A09D1652467E57A5D2108C /* GroceryListGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroceryListGenerator.swift; sourceTree = "<group>"; };
@@ -149,6 +207,7 @@
 				D42ACF43FBC27FA8158C6B87 /* App */,
 				06863CAF7F89ADB44289009E /* NutriPilotApp */,
 				C4BF06BA981A9D633A9F7347 /* NutriPilotCore */,
+				DEB05CC5346AD3BC9C25B77F /* NutriPilotWidgets */,
 				CD48FC0AEE290B27763DBCF4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -195,6 +254,7 @@
 			isa = PBXGroup;
 			children = (
 				6794148A21436C4483AB9606 /* NutriPilot.app */,
+				19F6E642CA23114F8C512612 /* NutriPilotWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -213,6 +273,16 @@
 				A67B48114E0DFF68CFA066FC /* NutriPilotApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		DEB05CC5346AD3BC9C25B77F /* NutriPilotWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				A7F2A42EDA149E7A4CD1F245 /* NutriPilotWidgetsBundle.swift */,
+				5A540EBBBA0FF91435326D4A /* WaterPacingWidget.swift */,
+			);
+			name = NutriPilotWidgets;
+			path = Sources/NutriPilotWidgets;
 			sourceTree = "<group>";
 		};
 		DFD0179C41BC9FCD4EFD35F9 /* Nutrition */ = {
@@ -253,10 +323,12 @@
 			buildConfigurationList = D1441B15A4D5302F17621120 /* Build configuration list for PBXNativeTarget "NutriPilot" */;
 			buildPhases = (
 				0EEC530D7403A6E745544021 /* Sources */,
+				BC3B6CFDEFB01189EA9A4AB1 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				BA3BA55EB92AA8D5B6782FF2 /* PBXTargetDependency */,
 			);
 			name = NutriPilot;
 			packageProductDependencies = (
@@ -264,6 +336,23 @@
 			productName = NutriPilot;
 			productReference = 6794148A21436C4483AB9606 /* NutriPilot.app */;
 			productType = "com.apple.product-type.application";
+		};
+		75A307B4DCF4E0B0210254B2 /* NutriPilotWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3E87A2FC4F0DEE9C2F7AD061 /* Build configuration list for PBXNativeTarget "NutriPilotWidgets" */;
+			buildPhases = (
+				36A259BD8D53B8C544AC72F1 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NutriPilotWidgets;
+			packageProductDependencies = (
+			);
+			productName = NutriPilotWidgets;
+			productReference = 19F6E642CA23114F8C512612 /* NutriPilotWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -275,6 +364,10 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					08D7FDEEC66943011CE1AAF6 = {
+						DevelopmentTeam = 6F2KGULZ85;
+						ProvisioningStyle = Automatic;
+					};
+					75A307B4DCF4E0B0210254B2 = {
 						DevelopmentTeam = 6F2KGULZ85;
 						ProvisioningStyle = Automatic;
 					};
@@ -295,6 +388,7 @@
 			projectRoot = "";
 			targets = (
 				08D7FDEEC66943011CE1AAF6 /* NutriPilot */,
+				75A307B4DCF4E0B0210254B2 /* NutriPilotWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -349,7 +443,52 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		36A259BD8D53B8C544AC72F1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				22830C8FF477109C9BBB0988 /* BioimpedancePDFParser.swift in Sources */,
+				FEDF003CBDE64A66FD17F078 /* BodyCompositionCalculator.swift in Sources */,
+				2FB9907BEDEBECD2035E1462 /* BodyMeasurement.swift in Sources */,
+				65D9DDBCCFE61CF077EC2DDB /* BodyMeasurementStore.swift in Sources */,
+				4A13E33C0FF166910EF30011 /* FoodItem.swift in Sources */,
+				E6483707ABDF90CE41CF10E8 /* FoodSearchEngine.swift in Sources */,
+				D9544F519CB70A9B2890117E /* FoodSubstitutionEngine.swift in Sources */,
+				330B6A00260EABE43F063398 /* GroceryListGenerator.swift in Sources */,
+				55E3B3BF9B2039F051A92AC1 /* MealLog.swift in Sources */,
+				36B5D0D3177ADD8C02B61F8F /* MealParserEngine.swift in Sources */,
+				EB6FB5D4EEE9775B17686B90 /* MealPlanAdjustmentEngine.swift in Sources */,
+				E37A1197CE421DFAE50CCDC8 /* MealPlanComplianceEvaluator.swift in Sources */,
+				B489658E0F574F2CF8B5DC6D /* MealPlanGenerator.swift in Sources */,
+				2E40DF9FC08DA1934D95A796 /* MealPlanImportEngine.swift in Sources */,
+				F22A42CEC855E42181598BA7 /* MealPlanStore.swift in Sources */,
+				797117BA8EA27F556AD6945B /* MealStore.swift in Sources */,
+				A6BD75D76EDE8A8188D69576 /* NutriPilotWidgetsBundle.swift in Sources */,
+				B9659D9A32FAFE4ABE9F9F91 /* NutritionCalculator.swift in Sources */,
+				8C22C1CBED0831F928FF82A3 /* NutritionTarget.swift in Sources */,
+				87394FD4626CED4BDDEAD76B /* ProfileStore.swift in Sources */,
+				65CF7B13A5BB738C36123DB6 /* ReportExporter.swift in Sources */,
+				C86BCD9A25B9285273C2FF64 /* SuccinctAssistantEngine.swift in Sources */,
+				6A21D0D9E0FBD6C358548E80 /* TBCAFoodDatabase.swift in Sources */,
+				FD9675138EFD8DEF4F9BF1EA /* UserProfile.swift in Sources */,
+				879019B87EFBA8AA197C967B /* WaterLiveActivityManager.swift in Sources */,
+				339B48F1BEA64CB8E73B2D21 /* WaterLog.swift in Sources */,
+				3ED58ECD96FA8FDC01F56E5A /* WaterPacingActivityAttributes.swift in Sources */,
+				52E03708317F729C38758580 /* WaterPacingWidget.swift in Sources */,
+				67AABA484A4A5EA2B75E9C5A /* WaterStore.swift in Sources */,
+				6234CD9760377A2F2A60E4F9 /* WeightTrendCalculator.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		BA3BA55EB92AA8D5B6782FF2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 75A307B4DCF4E0B0210254B2 /* NutriPilotWidgets */;
+			targetProxy = 48D7D57888467523CA555366 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		17DF2942590A37E61F2C47A0 /* Debug */ = {
@@ -475,6 +614,26 @@
 			};
 			name = Release;
 		};
+		9159CB791287771EB8B77C51 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6F2KGULZ85;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSExtension = "[\"NSExtensionPointIdentifier\": \"com.apple.widgetkit-extension\"]";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jotape.NutriPilot.widgets;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		CBF8791E73C060CD95FD5C2A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -492,6 +651,26 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.jotape.NutriPilot;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D5A555656146E4433FE1FFB9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6F2KGULZ85;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSExtension = "[\"NSExtensionPointIdentifier\": \"com.apple.widgetkit-extension\"]";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jotape.NutriPilot.widgets;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -522,6 +701,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		3E87A2FC4F0DEE9C2F7AD061 /* Build configuration list for PBXNativeTarget "NutriPilotWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D5A555656146E4433FE1FFB9 /* Debug */,
+				9159CB791287771EB8B77C51 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		A9E46987719AED3AD38A0854 /* Build configuration list for PBXProject "NutriPilot" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
