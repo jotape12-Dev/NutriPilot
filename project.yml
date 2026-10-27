@@ -7,6 +7,9 @@ settings:
   SWIFT_VERSION: "5.9"
   GENERATE_INFOPLIST_FILE: YES
   PRODUCT_BUNDLE_IDENTIFIER: com.jotape.NutriPilot
+  # Obrigatórios para instalar no dispositivo; app e extensão precisam ter a mesma versão.
+  MARKETING_VERSION: "1.0"
+  CURRENT_PROJECT_VERSION: "1"
 targets:
   NutriPilot:
     type: application
@@ -34,12 +37,17 @@ targets:
     sources:
       - Sources/NutriPilotWidgets
       - Sources/NutriPilotCore
+    # NSExtension é um dicionário: INFOPLIST_KEY_* não o gera, então o Info.plist precisa ser um arquivo real.
+    info:
+      path: Sources/NutriPilotWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: NutriPilot Widgets
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSSupportsLiveActivities: true
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.jotape.NutriPilot.widgets
       DEVELOPMENT_TEAM: 6F2KGULZ85
       CODE_SIGN_STYLE: Automatic
       CODE_SIGN_IDENTITY: "Apple Development"
       GENERATE_INFOPLIST_FILE: YES
-      INFOPLIST_KEY_NSExtension:
-        NSExtensionPointIdentifier: com.apple.widgetkit-extension
-      INFOPLIST_KEY_NSSupportsLiveActivities: YES
